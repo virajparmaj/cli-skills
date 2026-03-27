@@ -1,0 +1,62 @@
+---
+name: v-auth
+description: Audit authentication, authorization boundaries, session integrity, protected routes, Supabase RLS, custom JWT or cookie auth, serverless auth gaps, and demo or dev bypasses. Use when asked to review auth, roles, login or logout flows, password reset, backend bearer-token enforcement, route protection, RLS policies, storage policies, env-var exposure, or whether frontend restrictions are actually enforced by the backend. Triggers include "audit auth", "map the real auth model", "check protected routes", "verify RLS", "is demo mode safe", "is backend actually enforcing this", and "find launch-blocking auth gaps".
+---
+
+# Auth Boundaries Audit
+
+This skill targets React + Vite SPAs, Supabase + RLS apps, Vercel serverless functions, and FastAPI backends.
+
+## Start Here
+
+1. Identify the target repo. If the user says "this repo", use the current working directory.
+2. Run `scripts/discover-auth-surface.sh /absolute/path/to/repo` first. It surfaces the repo's auth docs, backend boundaries, migrations, env examples, and likely auth-related files.
+3. Read project context in this order when present:
+   - `CLAUDE.md`
+   - `notes/04_auth_and_roles.md`
+   - `notes/03_architecture.md`
+   - `notes/13_prompt_context.md`
+   - `README.md`
+   - `.env.example`
+   - `.env.local.example`
+   - `notes/10_deployment.md`
+4. Treat `notes/04_auth_and_roles.md` as the auth baseline when it exists. Verify its claims against code, but do not waste time re-deriving already confirmed facts.
+5. Stay read-only unless the user explicitly asks for fixes.
+
+## Workflow
+
+- Build a factual auth inventory and label each item as `enforced in code`, `UI-only`, `documented-but-missing`, or `partially-implemented`.
+- Use `references/auth-audit-spec.md` for the full checklist, workspace-specific failure modes, output format, and optional deep-dive variants.
+- Prioritize the patterns that recur in this workspace:
+  - routes hidden in nav but still served by the router
+  - `RoleContext`, feature flags, or local state used as if they were authorization
+  - `ProtectedRoute` or guards that exist but are not wired into the real router or shell
+  - Supabase RLS mismatches, path-based storage policies, and triggers trusting `raw_user_meta_data`
+  - FastAPI or Vercel endpoints with no bearer-token verification
+  - demo or dev auth fallbacks, localStorage session shims, and feature-flagged auth stubs
+  - in-memory rate limiters in serverless code
+  - mocked auth tests that cannot catch real policy regressions
+  - OAuth 2.0 or OIDC flow issues: implicit flow usage, missing PKCE, insecure redirect URI validation
+  - missing or weak multi-factor authentication on sensitive operations
+  - account recovery flows with non-expiring or reusable reset tokens
+  - API key management: missing rotation, no expiry, keys in client-accessible code
+
+## Evidence Standards
+
+- Separate verified findings from unverified concerns.
+- Cite file paths and line numbers for every verified finding.
+- Describe a concrete exploit or misuse path, not a generic risk label.
+- Suggest the smallest viable fix, but do not edit code unless the user asks.
+
+## Output
+
+Use the six-part report in `references/auth-audit-spec.md`:
+
+1. Auth model summary
+2. Verified findings
+3. Unverified concerns
+4. Prioritized fix list
+5. Missing tests
+6. Reusable auth audit patterns
+
+Use the optional multi-project sweep, Supabase RLS deep-dive, session lifecycle stress test, or backend-enforcement cross-check when the repo or request calls for it.

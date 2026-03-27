@@ -1,0 +1,4 @@
+interface:
+  display_name: "V Test Functional"
+  short_description: "Functional testing for end-to-end product behavior"
+  default_prompt: "Run a functional testing pass using v-test-functional and return verified findings with repro steps, impact, and a release readiness verdict."

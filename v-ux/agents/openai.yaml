@@ -1,0 +1,4 @@
+interface:
+  display_name: "UX Trust Audit"
+  short_description: "Audit user trust, recovery, and state gaps"
+  default_prompt: "Use $ux-trust-audit to audit this repo for user trust gaps, broken recovery paths, and missing loading, empty, or error states."

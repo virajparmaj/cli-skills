@@ -1,0 +1,4 @@
+interface:
+  display_name: "Repo Security Audit"
+  short_description: "Audit repo security and abuse gaps"
+  default_prompt: "Use $repo-security-audit to review this repo for secrets exposure, auth gaps, weak RLS, API hardening issues, and abuse-resistance risks."
