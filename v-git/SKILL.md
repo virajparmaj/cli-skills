@@ -23,13 +23,15 @@ Use this skill when the user wants a fast commit message from the repo's current
 
 ## Output contract (strict)
 
-- Output only one Markdown code block.
-- First line format: `<type> : <short summary 4-5 words max>`.
-- Then add `1` to `4` bullets using `- `.
+- Output one fenced `bash` code block containing exactly three lines:
+  1. `git add .`
+  2. `git commit -m "<type> : <short summary 4-5 words max>"`
+  3. `git push origin main`
+- After the code block, add `1` to `4` plain markdown bullets using `- ` summarizing change groups (for context, not for pasting).
 - Keep each bullet under `6` words.
 - Grammar can be rough.
 - Focus on meaningful change groups.
-- Do not add any text outside the code block.
+- Do not add any other text outside the code block and bullets.
 
 ## Type preference hints
 
@@ -45,10 +47,13 @@ Use this skill when the user wants a fast commit message from the repo's current
 
 If no staged, unstaged, or untracked changes exist, return:
 
-```text
-chore : no changes detected
-- working tree clean
+```bash
+git add .
+git commit -m "chore : no changes detected"
+git push origin main
 ```
+
+- working tree clean
 
 ## Monorepo and scope support
 
