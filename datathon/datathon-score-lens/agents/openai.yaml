@@ -1,0 +1,7 @@
+interface:
+  display_name: "Datathon Score Lens"
+  short_description: "Decompose Team095 v07 vs v08 score gaps"
+  default_prompt: "Use $datathon-score-lens to compare Team095 forecasting candidates and show where Volume Score and Workload Penalty are still being lost."
+
+policy:
+  allow_implicit_invocation: true

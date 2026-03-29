@@ -1,0 +1,7 @@
+interface:
+  display_name: "Datathon Rolling Backtest"
+  short_description: "Stress-test Team095 v08 interval-shape changes"
+  default_prompt: "Use $datathon-rolling-stress-backtest to build rolling validation windows and summarize where Team095 is still losing Volume Score or workload stability."
+
+policy:
+  allow_implicit_invocation: true
