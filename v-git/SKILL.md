@@ -23,15 +23,26 @@ Use this skill when the user wants a fast commit message from the repo's current
 
 ## Output contract (strict)
 
-- Output one fenced `bash` code block containing exactly three lines:
-  1. `git add .`
-  2. `git commit -m "<type> : <short summary 4-5 words max>"`
-  3. `git push origin main`
-- After the code block, add `1` to `4` plain markdown bullets using `- ` summarizing change groups (for context, not for pasting).
-- Keep each bullet under `6` words.
-- Grammar can be rough.
-- Focus on meaningful change groups.
-- Do not add any other text outside the code block and bullets.
+- Output one fenced `bash` code block with this exact structure:
+  1. `git add .` (blank line after)
+  2. `git commit -m "<type> : <short summary 4-5 words max>" \` followed by 1–4 additional `-m "<change group>"` lines, each line except the last ending with ` \`
+  3. (blank line after the commit block)
+  4. `git push origin main`
+- Each extra `-m` line = one change group (≤6 words, rough grammar OK).
+- All content lives inside the code block — no bullets or text outside.
+- Do not add any other text outside the code block.
+
+Example structure:
+```bash
+git add .
+
+git commit -m "feat : add auth module" \
+  -m "JWT token generation" \
+  -m "login + refresh endpoints" \
+  -m "input validation + tests"
+
+git push origin main
+```
 
 ## Type preference hints
 
@@ -49,11 +60,11 @@ If no staged, unstaged, or untracked changes exist, return:
 
 ```bash
 git add .
+
 git commit -m "chore : no changes detected"
+
 git push origin main
 ```
-
-- working tree clean
 
 ## Monorepo and scope support
 
