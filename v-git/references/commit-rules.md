@@ -4,13 +4,12 @@ Review this repository's current git changes (staged + unstaged + untracked) and
 
 Rules:
 
-- Output only a Markdown code block.
-- First line: one concise conventional-commit style title.
-- Title format: `<type> : <short summary 4-5 words max>`.
-- Then exactly `1` to `4` short bullets using `- `.
+- Output one fenced `bash` code block with exactly three lines: `git add .`, `git commit -m "<type> : <short summary 4-5 words max>"`, `git push origin main`.
+- After the bash code block, add `1` to `4` plain markdown bullets using `- ` summarizing change groups (outside the code block, for context).
 - Keep each bullet under `6` words.
 - Grammar does not need to be perfect.
 - Focus on meaningful change groups, not file-by-file noise.
+- Do not add any other text outside the code block and bullets.
 
 Allowed types:
 
