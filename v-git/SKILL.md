@@ -25,10 +25,10 @@ Use this skill when the user wants a fast commit message from the repo's current
 
 - Output one fenced `bash` code block with this exact structure:
   1. `git add .` (blank line after)
-  2. `git commit -m "<type> : <short summary 4-5 words max>" \` followed by 1–4 additional `-m "<change group>"` lines, each line except the last ending with ` \`
+  2. `git commit -m "<type> : <short summary 4-5 words max>" \` followed by a single `-m` containing all change groups as `- ` prefixed lines in one multiline string (closing `"` on the last bullet line)
   3. (blank line after the commit block)
   4. `git push origin main`
-- Each extra `-m` line = one change group (≤6 words, rough grammar OK).
+- Each bullet = one change group (≤6 words, rough grammar OK). All bullets go in one `-m` — no separate `-m` per bullet.
 - All content lives inside the code block — no bullets or text outside.
 - Do not add any other text outside the code block.
 
@@ -37,9 +37,9 @@ Example structure:
 git add .
 
 git commit -m "feat : add auth module" \
-  -m "JWT token generation" \
-  -m "login + refresh endpoints" \
-  -m "input validation + tests"
+  -m "- JWT token generation
+- login + refresh endpoints
+- input validation + tests"
 
 git push origin main
 ```
@@ -61,7 +61,8 @@ If no staged, unstaged, or untracked changes exist, return:
 ```bash
 git add .
 
-git commit -m "chore : no changes detected"
+git commit -m "chore : no changes detected" \
+  -m "- nothing to commit"
 
 git push origin main
 ```
