@@ -1,7 +1,0 @@
-interface:
-  display_name: "Datathon Notebook Loop"
-  short_description: "Keep Team095 v08 iteration in one notebook"
-  default_prompt: "Use $datathon-notebook-forecast-loop to build or refactor the canonical August 2025 notebook workflow for Team095."
-
-policy:
-  allow_implicit_invocation: true

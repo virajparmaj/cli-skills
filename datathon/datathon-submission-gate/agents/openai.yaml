@@ -1,7 +1,0 @@
-interface:
-  display_name: "Datathon Submission Gate"
-  short_description: "Run final Team095 template and safety checks"
-  default_prompt: "Use $datathon-submission-gate to validate this Team095 forecast CSV before upload."
-
-policy:
-  allow_implicit_invocation: true

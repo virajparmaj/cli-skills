@@ -1,7 +1,0 @@
-interface:
-  display_name: "Datathon Tail Guardrails"
-  short_description: "Find unsafe v08 CCT, abandon, and workload tails"
-  default_prompt: "Use $datathon-tail-risk-guardrails to scan this Team095 forecast for unsafe CCT, abandon, and workload tails before submission."
-
-policy:
-  allow_implicit_invocation: true
