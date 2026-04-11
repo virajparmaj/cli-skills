@@ -21,21 +21,50 @@ Use this spec when refreshing the README for an app or desktop-software repo.
   product.
 - Do not replace branding casually just to make the README look newer.
 
-## Screenshot rules
+## Screenshot capture
 
-- Prefer real, current screenshots of the implemented app.
-- Store screenshot assets in stable repo paths such as:
-  - `docs/images/`
-  - `docs/screenshots/`
-  - `assets/readme/`
-  - `assets/screenshots/`
-- Embed screenshots directly in the README.
-- Add short captions only.
-- Choose screenshots that help a new user understand the product quickly before
-  installation.
-- Replace stale screenshots when the UI, feature set, or key flow has changed.
-- If real screenshots are blocked, do not silently swap in mockups or generated
-  images. Ask first.
+- Capture real screenshots of the running app before writing the README when
+  the repo can be launched locally.
+- Follow
+  [`references/screenshot-capture-guide.md`](screenshot-capture-guide.md) for
+  the app-type-specific workflow and fallbacks.
+- Target 4-6 key views. Do not exceed 8 screenshots.
+
+## Screenshot storage
+
+- Store screenshot assets in `docs/screenshots/`.
+- Use descriptive filenames such as `main-view.png` or
+  `settings-panel-dark.png`.
+- Compress screenshot files larger than 500 KB before embedding them.
+
+## Screenshot gallery format
+
+Use HTML tables for side-by-side layout because GitHub strips most CSS:
+
+```html
+<table>
+  <tr>
+    <td width="33%"><img src="docs/screenshots/main.png" width="280" alt="Main view"><br><sub>Main view</sub></td>
+    <td width="33%"><img src="docs/screenshots/settings.png" width="280" alt="Settings"><br><sub>Settings</sub></td>
+    <td width="33%"><img src="docs/screenshots/feature.png" width="280" alt="Feature"><br><sub>Feature name</sub></td>
+  </tr>
+</table>
+```
+
+Rules:
+
+- Use 2-3 images per row at roughly 280 px width each.
+- Put short captions in `<sub>` tags below each image.
+- If there are only 1-2 screenshots, reduce the number of columns.
+- Put dark-mode screenshots in a second row or inside a `<details>` block.
+- Do not rely on scrolling galleries, flexbox, or CSS-only layout tricks.
+
+## Screenshot fallback
+
+- If capture fails and no existing screenshots are still usable, insert
+  `<!-- Screenshots pending -->`.
+- Never insert broken image links.
+- Never silently substitute mockups or generated images.
 
 ## Copy rules
 
@@ -100,8 +129,10 @@ Before finishing a README refresh, confirm:
 
 - the section order matches this spec
 - the logo remains at the top
-- screenshot files exist in stable repo paths
+- referenced screenshot files exist
+- screenshot gallery uses HTML table markup
 - screenshot captions are short
+- screenshot image files stay under the size target
 - feature bullets are evidence-backed
 - install steps match the real scripts and tooling
 - developer setup is complete and moved to the end
