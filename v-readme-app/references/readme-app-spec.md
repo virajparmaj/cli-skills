@@ -2,6 +2,10 @@
 
 Use this spec when refreshing the README for an app or desktop-software repo.
 
+This spec is repo-agnostic. Apply it to the current `target repo` only, and
+never assume a specific app name, screenshot set, path layout, or feature list
+from a previous README refresh.
+
 ## Required section order
 
 1. App name
@@ -17,6 +21,8 @@ Use this spec when refreshing the README for an app or desktop-software repo.
 - Keep the existing logo or hero brand image at the top when the repo already
   uses one.
 - Do not move the logo below the intro.
+- Derive product naming from the target repo's current code, assets, and
+  README, not from a previously edited app.
 - Preserve existing branding assets and paths when they still match the current
   product.
 - Do not replace branding casually just to make the README look newer.
@@ -25,14 +31,22 @@ Use this spec when refreshing the README for an app or desktop-software repo.
 
 - Capture real screenshots of the running app before writing the README when
   the repo can be launched locally.
+- For native macOS apps, "real screenshots" means building and launching the
+  current app and capturing the actual app window.
 - Follow
   [`references/screenshot-capture-guide.md`](screenshot-capture-guide.md) for
   the app-type-specific workflow and fallbacks.
 - Target 4-6 key views. Do not exceed 8 screenshots.
+- Record screenshot status explicitly as `freshly captured`, `reused`, or
+  `pending`.
 
 ## Screenshot storage
 
-- Store screenshot assets in `docs/screenshots/`.
+- Preserve the repo's existing screenshot directory when it already uses one
+  such as `docs/images/`, unless there is a good reason to migrate.
+- Otherwise store screenshot assets in `docs/screenshots/`.
+- Use one screenshot directory consistently for the refresh. Do not silently
+  mix both old and new locations.
 - Use descriptive filenames such as `main-view.png` or
   `settings-panel-dark.png`.
 - Compress screenshot files larger than 500 KB before embedding them.
@@ -44,9 +58,9 @@ Use HTML tables for side-by-side layout because GitHub strips most CSS:
 ```html
 <table>
   <tr>
-    <td width="33%"><img src="docs/screenshots/main.png" width="280" alt="Main view"><br><sub>Main view</sub></td>
-    <td width="33%"><img src="docs/screenshots/settings.png" width="280" alt="Settings"><br><sub>Settings</sub></td>
-    <td width="33%"><img src="docs/screenshots/feature.png" width="280" alt="Feature"><br><sub>Feature name</sub></td>
+    <td width="33%"><img src="<chosen-screenshot-dir>/main.png" width="280" alt="Main view"><br><sub>Main view</sub></td>
+    <td width="33%"><img src="<chosen-screenshot-dir>/settings.png" width="280" alt="Settings"><br><sub>Settings</sub></td>
+    <td width="33%"><img src="<chosen-screenshot-dir>/feature.png" width="280" alt="Feature"><br><sub>Feature name</sub></td>
   </tr>
 </table>
 ```
@@ -61,10 +75,24 @@ Rules:
 
 ## Screenshot fallback
 
+- If fresh capture is blocked or skipped, explain why before falling back.
+- Treat reused screenshots as a documented fallback, not as silent success.
+- Reuse existing screenshots only when they still match the current product.
 - If capture fails and no existing screenshots are still usable, insert
   `<!-- Screenshots pending -->`.
 - Never insert broken image links.
 - Never silently substitute mockups or generated images.
+
+## Required final screenshot note
+
+The final response for a README refresh must include a short verification note
+that lists:
+
+- which screenshots were newly captured
+- which screenshots were reused
+- which screenshots remain pending
+- what tool, command, or capture path was attempted
+- what blocker occurred if fresh capture failed or was skipped
 
 ## Copy rules
 
@@ -133,6 +161,9 @@ Before finishing a README refresh, confirm:
 - screenshot gallery uses HTML table markup
 - screenshot captions are short
 - screenshot image files stay under the size target
+- the final response includes the required screenshot note
+- the screenshot note includes the attempted fresh-capture tool, command, or
+  path and any blocker
 - feature bullets are evidence-backed
 - install steps match the real scripts and tooling
 - developer setup is complete and moved to the end
