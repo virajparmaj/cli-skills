@@ -14,7 +14,6 @@ CONTEXT_FILES = [
     "notes/10_deployment.md",
     "notes/05_database_schema.md",
     "README.md",
-    ".impeccable.md",
     "PRODUCTION_READY.md",
 ]
 

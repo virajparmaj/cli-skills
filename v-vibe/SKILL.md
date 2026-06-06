@@ -1,6 +1,6 @@
 ---
 name: v-vibe
-description: "Review-only post-vibe-code architecture and maintainability audit for Vite/React/TypeScript apps with Tailwind/shadcn and optional Supabase, FastAPI, or Vercel backends. First read repo context files (CLAUDE.md, notes/*, README.md, .impeccable.md, PRODUCTION_READY.md) and do not repeat known issues unless there is a delta. Map stack/auth/data/tooling, inspect architecture debt, dead code/deps, demo-vs-prod splits, state/type drift, config/doc drift, bundle health, and tests. Output verified findings with file refs, severity, smallest fix, missing tests, cleanup backlog, reusable rules, and what's good. Trigger on audit repo, post-vibe review, maintainability audit, architecture debt."
+description: "Review-only post-vibe-code architecture and maintainability audit for Vite/React/TypeScript apps with Tailwind/shadcn and optional Supabase, FastAPI, or Vercel backends. First read repo context files (CLAUDE.md, notes/*, README.md, PRODUCTION_READY.md) and do not repeat known issues unless there is a delta. Map stack/auth/data/tooling, inspect architecture debt, dead code/deps, demo-vs-prod splits, state/type drift, config/doc drift, bundle health, and tests. Output verified findings with file refs, severity, smallest fix, missing tests, cleanup backlog, reusable rules, and what's good. Trigger on audit repo, post-vibe review, maintainability audit, architecture debt."
 ---
 
 # Post-Vibe-Code Architecture Audit
@@ -25,8 +25,7 @@ Use this skill when the task is to inspect a repo, not to fix it. Stay in review
      6. `notes/10_deployment.md`
      7. `notes/05_database_schema.md`
      8. `README.md`
-     9. `.impeccable.md`
-     10. `PRODUCTION_READY.md`
+     9. `PRODUCTION_READY.md`
    - Treat these files as the source of truth for deliberate tradeoffs, resolved issues, and known gaps.
    - Do not rereport tracked issues unless the issue worsened or produced a new symptom. Report the delta only.
    - If the repo lacks `notes/` or other context files, say so; that is itself a maintainability finding.

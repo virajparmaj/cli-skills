@@ -13,7 +13,6 @@ Use this reference when auditing Vite/React/TypeScript apps with Tailwind/shadcn
 - Common context files:
   - `notes/00-14*.md`
   - `CLAUDE.md`
-  - `.impeccable.md`
   - `PRODUCTION_READY.md`
 - Some repos are richly documented; some have sparse notes. Missing context is itself signal.
 
