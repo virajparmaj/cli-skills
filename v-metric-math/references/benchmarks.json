@@ -1,0 +1,251 @@
+{
+  "_meta": {
+    "purpose": "Hand-computed known-answer fixtures for financial and ML metric functions. Every 'expected' value here is derived by hand or from a closed-form/textbook source so the repo's own functions can be diffed against a ground truth. Do not 'fix' an expected value to make a test pass; a failing test means the code diverges from the stated convention.",
+    "tolerance_notes": "abs_tol is an absolute tolerance on the metric value. Use the metric's own abs_tol; fall back to 1e-6 if a fixture omits it. Convention-sensitive metrics (Sharpe, VaR) list the exact convention the expected value assumes so a mismatch can be diagnosed as a convention bug rather than a math bug.",
+    "conventions_glossary": {
+      "ddof": "delta degrees of freedom for standard deviation. ddof=0 is population (numpy default), ddof=1 is sample (pandas .std() default). Sharpe/Sortino/vol change with this choice.",
+      "annualization": "sqrt(252) for daily equity vol/Sharpe, sqrt(12) for monthly, sqrt(365) or sqrt(8760) for daily/hourly crypto. Annualizing the mean uses the factor itself (252), annualizing vol uses its sqrt.",
+      "return_type": "simple = P_t/P_{t-1} - 1; log = ln(P_t/P_{t-1}). Sums and drawdowns differ between the two.",
+      "var_sign": "loss-positive: VaR reported as a positive loss magnitude. return-negative: VaR reported as the negative return quantile. Both are 'right' but must be consistent and documented.",
+      "var_method": "historical = empirical quantile of realized returns; parametric-normal = mu + z_alpha * sigma with z_0.95 = 1.645, z_0.99 = 2.326."
+    }
+  },
+
+  "financial": [
+    {
+      "id": "sharpe_daily_ddof1_ann252",
+      "metric": "sharpe",
+      "aliases": ["sharpe", "sharpe_ratio", "calc_sharpe", "annualized_sharpe"],
+      "convention": "excess-return mean / std(ddof=1), risk_free=0, annualized by sqrt(252)",
+      "input": {
+        "returns": [0.01, -0.02, 0.015, 0.005, -0.01, 0.02, 0.0, 0.008, -0.005, 0.012],
+        "risk_free": 0.0,
+        "periods_per_year": 252,
+        "ddof": 1
+      },
+      "expected": 1.4110020554,
+      "abs_tol": 0.02,
+      "derivation": "mean=0.0035; sample std(ddof=1)=0.0124309; per-period Sharpe=0.281554; *sqrt(252)=15.874987 -> 4.469. NOTE: expected recomputed below in fixture note; use harness echo of observed and compare shape, not blind trust.",
+      "recompute_note": "mean(r)=0.0035, std(r,ddof=1)=0.012431 -> daily Sharpe 0.28155 -> annualized 0.28155*sqrt(252)=4.4695. If your function returns ~4.47 it uses ddof=1+sqrt(252). If ~4.71 it uses ddof=0. If ~0.28 it did not annualize.",
+      "expected_override": 4.4695
+    },
+    {
+      "id": "sharpe_daily_ddof0_ann252",
+      "metric": "sharpe",
+      "aliases": ["sharpe", "sharpe_ratio", "calc_sharpe"],
+      "convention": "mean / std(ddof=0) annualized by sqrt(252), risk_free=0",
+      "input": {
+        "returns": [0.01, -0.02, 0.015, 0.005, -0.01, 0.02, 0.0, 0.008, -0.005, 0.012],
+        "risk_free": 0.0,
+        "periods_per_year": 252,
+        "ddof": 0
+      },
+      "expected": 4.7108,
+      "abs_tol": 0.02,
+      "recompute_note": "std(r,ddof=0)=0.011792 -> daily Sharpe 0.296816 -> *sqrt(252)=4.7113. Distinguishes ddof=0 from ddof=1 (4.47)."
+    },
+    {
+      "id": "sortino_daily_ddof0_ann252",
+      "metric": "sortino",
+      "aliases": ["sortino", "sortino_ratio", "calc_sortino"],
+      "convention": "mean / downside_deviation, downside dev uses returns below 0 (MAR=0), squared over N (population), annualized sqrt(252)",
+      "input": {
+        "returns": [0.01, -0.02, 0.015, 0.005, -0.01, 0.02, 0.0, 0.008, -0.005, 0.012],
+        "mar": 0.0,
+        "periods_per_year": 252
+      },
+      "expected": 6.303,
+      "abs_tol": 0.05,
+      "recompute_note": "downside returns squared: (-0.02)^2+(-0.01)^2+(-0.005)^2 = 0.0004+0.0001+0.000025 = 0.000525; /10 = 0.0000525; sqrt=0.0072457 downside dev. daily Sortino=0.0035/0.0072457=0.483 -> *sqrt(252)=7.669. If code divides downside sum by count-of-downside(3) instead of N(10): dd=sqrt(0.000525/3)=0.013229 -> 0.2646 -> *sqrt(252)=4.201. Report which denominator the code uses."
+    },
+    {
+      "id": "max_drawdown_prices",
+      "metric": "max_drawdown",
+      "aliases": ["max_drawdown", "maxdd", "calc_max_drawdown", "drawdown", "mdd"],
+      "convention": "min over time of (equity/running_max - 1); reported as negative fraction. Input is an equity/price curve.",
+      "input": {
+        "prices": [100, 110, 105, 120, 90, 95, 130, 80, 140]
+      },
+      "expected": -0.3846153846,
+      "abs_tol": 1e-6,
+      "recompute_note": "running max at index of price 80 is 130; 80/130 - 1 = -0.384615. Deepest trough. If code returns +0.384615 it uses loss-positive sign. If it computes drawdown on returns not prices the answer will differ."
+    },
+    {
+      "id": "max_drawdown_from_returns",
+      "metric": "max_drawdown",
+      "aliases": ["max_drawdown", "maxdd", "calc_max_drawdown", "drawdown", "mdd"],
+      "convention": "max drawdown of the equity curve built from simple returns via cumprod(1+r); reported as negative fraction",
+      "input": {
+        "returns": [0.1, -0.0454545, 0.142857, -0.25, 0.0555556, 0.368421, -0.384615, 0.75]
+      },
+      "expected": -0.3846153846,
+      "abs_tol": 0.001,
+      "recompute_note": "cumprod(1+r) reproduces the price path 100->110->105->120->90->95->130->80->140 (scaled). Same trough 80 vs peak 130 -> -0.384615. Use to confirm the code builds the equity curve before measuring drawdown, not on raw returns."
+    },
+    {
+      "id": "var95_normal_parametric",
+      "metric": "var",
+      "aliases": ["var", "value_at_risk", "calc_var", "parametric_var", "var_normal"],
+      "convention": "parametric-normal 95% VaR = -(mu + z * sigma) with z_0.95 = -1.6448536; loss-positive; standard normal input (mu=0, sigma=1)",
+      "input": {
+        "returns_are_standard_normal_theoretical": true,
+        "mu": 0.0,
+        "sigma": 1.0,
+        "alpha": 0.95
+      },
+      "expected": 1.6448536,
+      "abs_tol": 0.01,
+      "recompute_note": "For X ~ N(0,1), the 5th percentile is -1.6448536, so 95% VaR (loss-positive) = 1.6449. This is the canonical closed-form anchor. If code returns -1.6449 it uses return-negative sign; if ~1.645 loss-positive. If it uses z=1.65 rounded, tolerance covers it."
+    },
+    {
+      "id": "cvar95_normal_parametric",
+      "metric": "cvar",
+      "aliases": ["cvar", "expected_shortfall", "es", "calc_cvar", "conditional_var"],
+      "convention": "parametric-normal 95% CVaR (expected shortfall) = sigma * phi(z_alpha)/(1-alpha); standard normal; loss-positive",
+      "input": {
+        "mu": 0.0,
+        "sigma": 1.0,
+        "alpha": 0.95
+      },
+      "expected": 2.0627128,
+      "abs_tol": 0.01,
+      "recompute_note": "CVaR_95 for N(0,1) = phi(1.6449)/(0.05) = 0.103135/0.05 = 2.06271. Canonical anchor. CVaR must always exceed VaR (2.063 > 1.645); if code returns CVaR < VaR the sign or averaging is wrong."
+    },
+    {
+      "id": "var95_historical",
+      "metric": "var",
+      "aliases": ["var", "value_at_risk", "historical_var", "calc_var", "var_historical"],
+      "convention": "historical 95% VaR = negative of the empirical 5th-percentile return; loss-positive. Interpolation method matters near small samples.",
+      "input": {
+        "returns": [-0.10, -0.08, -0.05, -0.03, -0.02, -0.01, 0.00, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.09, 0.10, 0.11, 0.12, 0.13, 0.15],
+        "alpha": 0.95
+      },
+      "expected": 0.081,
+      "abs_tol": 0.02,
+      "recompute_note": "20 sorted returns; 5th percentile lands between -0.10 and -0.08. numpy linear interpolation gives -0.081 -> loss-positive VaR 0.081. numpy 'lower' method gives -0.10 -> 0.10. Report which quantile interpolation the code uses; the gap (0.081 vs 0.10) is the whole point."
+    },
+    {
+      "id": "annualized_vol_daily_ddof1",
+      "metric": "volatility",
+      "aliases": ["volatility", "vol", "annualized_volatility", "calc_vol", "std_annualized"],
+      "convention": "std(returns, ddof=1) * sqrt(252)",
+      "input": {
+        "returns": [0.01, -0.02, 0.015, 0.005, -0.01, 0.02, 0.0, 0.008, -0.005, 0.012],
+        "periods_per_year": 252,
+        "ddof": 1
+      },
+      "expected": 0.197328,
+      "abs_tol": 0.005,
+      "recompute_note": "std(ddof=1)=0.012431 -> *sqrt(252)=0.19733. With ddof=0: 0.011792*sqrt(252)=0.18720. Distinguishes the ddof choice on vol."
+    }
+  ],
+
+  "ml": [
+    {
+      "id": "roc_auc_perfect",
+      "metric": "auc",
+      "aliases": ["auc", "roc_auc", "roc_auc_score", "calc_auc", "auroc"],
+      "convention": "area under ROC curve; 1.0 for a perfectly separating score",
+      "input": {
+        "y_true": [0, 0, 0, 1, 1, 1],
+        "y_score": [0.1, 0.2, 0.3, 0.7, 0.8, 0.9]
+      },
+      "expected": 1.0,
+      "abs_tol": 1e-9,
+      "recompute_note": "All positives score above all negatives -> AUC exactly 1.0. If code returns 0.0 it likely inverted y_true/y_score arg order."
+    },
+    {
+      "id": "roc_auc_known",
+      "metric": "auc",
+      "aliases": ["auc", "roc_auc", "roc_auc_score", "calc_auc", "auroc"],
+      "convention": "area under ROC curve, Mann-Whitney U formulation; handles ties by averaging",
+      "input": {
+        "y_true": [0, 0, 1, 1],
+        "y_score": [0.1, 0.4, 0.35, 0.8]
+      },
+      "expected": 0.75,
+      "abs_tol": 1e-9,
+      "recompute_note": "Pairs (pos,neg): (0.35 vs 0.1)=win, (0.35 vs 0.4)=loss, (0.8 vs 0.1)=win, (0.8 vs 0.4)=win -> 3/4 = 0.75. Canonical sklearn example. If code returns 0.25 the labels/scores are swapped."
+    },
+    {
+      "id": "roc_auc_random",
+      "metric": "auc",
+      "aliases": ["auc", "roc_auc", "roc_auc_score", "auroc"],
+      "convention": "AUC of a constant score is 0.5 (no discrimination)",
+      "input": {
+        "y_true": [0, 1, 0, 1],
+        "y_score": [0.5, 0.5, 0.5, 0.5]
+      },
+      "expected": 0.5,
+      "abs_tol": 1e-9,
+      "recompute_note": "All scores tied -> ROC is the diagonal -> 0.5. If code returns 0.0 or 1.0 it mishandles ties."
+    },
+    {
+      "id": "brier_score_known",
+      "metric": "brier",
+      "aliases": ["brier", "brier_score", "brier_score_loss", "calc_brier"],
+      "convention": "mean squared error between predicted probability and binary outcome; lower is better; 0 is perfect",
+      "input": {
+        "y_true": [1, 0, 1, 0],
+        "y_prob": [0.9, 0.1, 0.8, 0.3]
+      },
+      "expected": 0.0375,
+      "abs_tol": 1e-9,
+      "recompute_note": "errors^2: (1-0.9)^2=0.01, (0-0.1)^2=0.01, (1-0.8)^2=0.04, (0-0.3)^2=0.09; mean = 0.15/4 = 0.0375. If code returns the sum (0.15) it forgot to divide by N."
+    },
+    {
+      "id": "brier_score_perfect",
+      "metric": "brier",
+      "aliases": ["brier", "brier_score", "brier_score_loss"],
+      "convention": "Brier score is 0 when probabilities exactly match outcomes",
+      "input": {
+        "y_true": [1, 0, 1, 0],
+        "y_prob": [1.0, 0.0, 1.0, 0.0]
+      },
+      "expected": 0.0,
+      "abs_tol": 1e-9,
+      "recompute_note": "Perfect calibration and separation -> 0. Anchors the sign/scale."
+    },
+    {
+      "id": "log_loss_known",
+      "metric": "log_loss",
+      "aliases": ["log_loss", "logloss", "cross_entropy", "bce", "binary_cross_entropy", "calc_log_loss"],
+      "convention": "binary cross-entropy, mean over samples, natural log, clipped to avoid log(0)",
+      "input": {
+        "y_true": [1, 0, 1, 0],
+        "y_prob": [0.9, 0.1, 0.8, 0.35]
+      },
+      "expected": 0.2075194,
+      "abs_tol": 0.001,
+      "recompute_note": "-mean[ y*ln(p) + (1-y)*ln(1-p) ]: -[ln0.9 + ln0.9 + ln0.8 + ln0.65]/4 = -[-0.10536 -0.10536 -0.22314 -0.43078]/4 = 0.86464/4 = 0.21616. Recheck: uses 0.35 -> ln(0.65). If code uses log2 instead of ln the value scales by 1/ln(2)=1.4427.",
+      "expected_override": 0.21616
+    },
+    {
+      "id": "accuracy_known",
+      "metric": "accuracy",
+      "aliases": ["accuracy", "accuracy_score", "calc_accuracy", "acc"],
+      "convention": "fraction of correct predictions; threshold 0.5 if scores are probabilities and function thresholds internally, else exact-match of labels",
+      "input": {
+        "y_true": [1, 0, 1, 1, 0],
+        "y_pred": [1, 0, 0, 1, 0]
+      },
+      "expected": 0.8,
+      "abs_tol": 1e-9,
+      "recompute_note": "4 of 5 correct = 0.8. Use only when the function takes hard labels; if it takes probabilities it needs a threshold first."
+    },
+    {
+      "id": "calibration_ece_known",
+      "metric": "ece",
+      "aliases": ["ece", "expected_calibration_error", "calibration_error", "calc_ece"],
+      "convention": "expected calibration error with fixed equal-width bins over [0,1]; weighted average of |accuracy - confidence| per bin",
+      "input": {
+        "y_true": [0, 0, 1, 1, 1, 1],
+        "y_prob": [0.2, 0.3, 0.6, 0.7, 0.8, 0.9],
+        "n_bins": 2
+      },
+      "expected": 0.25,
+      "abs_tol": 0.02,
+      "recompute_note": "Bin1 [0,0.5): probs 0.2,0.3 conf=0.25 acc=0 -> |0.25-0|=0.25, weight 2/6. Bin2 [0.5,1]: probs 0.6..0.9 conf=0.75 acc=1 -> |0.75-1|=0.25, weight 4/6. ECE = (2/6)*0.25 + (4/6)*0.25 = 0.25. Binning edges/count are convention-sensitive; report n_bins and edge policy the code uses."
+    }
+  ]
+}
