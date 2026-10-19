@@ -1,6 +1,6 @@
 # Multi-Commit Split Rules
 
-Group the working tree's current changes (staged + unstaged + untracked) into 2-5 logical commits, each in Veer's strict commit format, and emit them as one paste-ready bash sequence. This extends the single-commit contract in [v-git/references/commit-rules.md](../../v-git/references/commit-rules.md) to N commits — the per-commit title and body format is identical.
+Group the working tree's current changes (staged + unstaged + untracked) into not more than 7 logical commits (high number only if sensible), each in Veer's strict commit format, and emit them as one paste-ready bash sequence. This extends the single-commit contract in [v-git/references/commit-rules.md](../../v-git/references/commit-rules.md) to N commits — the per-commit title and body format is identical.
 
 ## Per-commit format (reused from v-git, unchanged)
 
