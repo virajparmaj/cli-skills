@@ -6,7 +6,7 @@ When the user enters or mentions a skill or folder name (e.g., `v-git`, `v-auth`
 2. **Load & Read Skill**: Access and follow the instructions in `~/.gemini/config/skills/<skill-name>/SKILL.md` (or `/Users/veerr_89/Work/cli-skills/<skill-name>/SKILL.md`).
 3. **Execution Standards**: Execute any scripts in the skill's `scripts/` directory against the target repo/path, follow all operating standards, and output the result strictly according to the skill's output contract.
 
-## Registered Skill Directory Names (40 Skills)
+## Registered Skill Directory Names (44 Skills)
 - `v-auth`: Authentication, authorization, session integrity, protected routes, and Supabase RLS audit.
 - `v-backtest-audit`: Backtest & signal evaluation leakage, lookahead, and realism audit.
 - `v-backtest-report`: Standardized, assumption-honest quantitative backtest report generation.
@@ -47,3 +47,7 @@ When the user enters or mentions a skill or folder name (e.g., `v-git`, `v-auth`
 - `v-venv-doctor`: Python virtual environment diagnosis on Apple Silicon.
 - `v-vercel-doctor`: Diagnose local vs Vercel production deployment divergence.
 - `v-vibe`: Post-vibe code maintainability and architecture debt audit.
+- `v-vibe-app`: Post-vibe SaaS & backend audit (19 distributed systems pillars, 80+ enterprise readiness, pre-launch 20).
+- `v-vibe-macos`: Post-vibe macOS desktop audit (App Sandbox, entitlements, PrivacyInfo.xcprivacy, atomic writes, WAL mode).
+- `v-vibe-ml`: Post-vibe AI/LLM/agent audit (prompt injection, tenant spend caps, model fallback, evals, RAG isolation).
+- `v-vibe-web`: Post-vibe website & marketing audit (GEO/AI search discovery, 20-point speedmaxxing, Core Web Vitals).

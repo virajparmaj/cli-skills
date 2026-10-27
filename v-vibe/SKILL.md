@@ -25,6 +25,11 @@ Run this skill in your highest-effort mode, whatever model you are. Prefer corre
 
 - Run `python3 "<skill-path>/scripts/repo_audit_inventory.py" --repo "<repo>"` first.
 - If the repo is a Vite/React app, read [references/workspace-patterns.md](references/workspace-patterns.md) before writing findings.
+- **Specialized Product Audits**: If auditing a specific product type, use the targeted `v-vibe-*` audit:
+  - `v-vibe-web`: Websites, marketing/landing pages, GEO (AI search discovery), 20-point speedmaxxing.
+  - `v-vibe-app`: Full-stack SaaS apps, APIs, 19 distributed systems pillars, 80+ enterprise readiness, pre-launch 20.
+  - `v-vibe-macos`: macOS desktop software (Swift/Tauri/Electron), App Sandbox, entitlements, PrivacyInfo.xcprivacy, atomic writes.
+  - `v-vibe-ml`: AI/LLM/agent products, prompt injection, spend caps, model fallback, evals, RAG isolation.
 - Build a short mental model of the app before judging quality.
 
 ## Workflow
