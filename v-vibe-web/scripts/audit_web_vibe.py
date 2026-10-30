@@ -269,6 +269,98 @@ def check_prelaunch_essentials(repo_path: Path):
     return results
 
 
+def check_design_and_codebase_slop(repo_path: Path):
+    results = {
+        "design_slop": {
+            "badge_count": 0,
+            "italic_buzzwords": [],
+            "instrument_serif_negative_kerning": [],
+            "divider_count": 0,
+            "opacity_layering_count": 0,
+            "bordered_container_count": 0,
+            "superfluous_diagrams": [],
+            "code_breadcrumbs": [],
+            "section_numbering": [],
+        },
+        "codebase_slop": {
+            "layer_first_layout": False,
+            "feature_first_layout": False,
+            "god_files": [],
+            "representable_illegal_states": [],
+            "layering_violations": [],
+        },
+    }
+
+    src_dir = repo_path / "src"
+    if src_dir.exists():
+        layer_dirs = {"components", "services", "controllers", "models", "hooks", "utils", "views", "pages"}
+        found = [d.name for d in src_dir.iterdir() if d.is_dir() and d.name in layer_dirs]
+        has_features = (src_dir / "features").is_dir() or (src_dir / "modules").is_dir()
+        results["codebase_slop"]["layer_first_layout"] = len(found) >= 3 and not has_features
+        results["codebase_slop"]["feature_first_layout"] = has_features
+
+    badge_pat = re.compile(r'<Badge\b')
+    italic_pat = re.compile(r'(?:\*(?:effortlessly|seamlessly|intelligently|instantly|automatically)\*|\bitalic\b)', re.IGNORECASE)
+    serif_kerning_pat = re.compile(r'(?:font-serif|Instrument Serif).*?(?:tracking-tighter|tracking-\[-0\.05em\])', re.IGNORECASE)
+    divider_pat = re.compile(r'(?:<Separator\b|<hr\b|divide-y|border-t\b)')
+    opacity_pat = re.compile(r'(?:bg-opacity-|text-white/\d+|text-muted-foreground/\d+|bg-neutral-\d+/\d+)')
+    border_container_pat = re.compile(r'border\s+border-border\s+rounded-')
+    diagram_pat = re.compile(r'(?:```mermaid|<svg[^>]*class="[^"]*(?:diagram|flowchart)[^"]*")', re.IGNORECASE)
+    breadcrumb_pat = re.compile(r'(?:Dashboard\s*>\s*[A-Za-z]+|[A-Za-z]+\s*>\s*[A-Za-z]+\s*>\s*[A-Za-z]+)')
+    section_num_pat = re.compile(r'(?:0[1-9]\s*\/|0[1-9]\s*-\s*|Step\s*0?[1-9][:\s-])', re.IGNORECASE)
+    illegal_state_pat = re.compile(r'(?:isLoading|loading)\s*:\s*boolean.*?(?:isError|error).*?(?:data|user)', re.DOTALL)
+    layering_violation_pat = re.compile(r'(?:supabase\.from\(|prisma\.[a-zA-Z0-9_]+\.(?:find|create|update)|SELECT\s+.+?\s+FROM)', re.IGNORECASE)
+
+    for p in walk_files(repo_path):
+        if p.suffix.lower() not in WEB_EXTENSIONS:
+            continue
+        rel = str(p.relative_to(repo_path))
+
+        try:
+            content = p.read_text(errors="ignore")
+        except Exception:
+            continue
+
+        lines = content.splitlines()
+        if len(lines) > 300 and len(results["codebase_slop"]["god_files"]) < 5:
+            results["codebase_slop"]["god_files"].append({"file": rel, "lines": len(lines)})
+
+        if illegal_state_pat.search(content) and len(results["codebase_slop"]["representable_illegal_states"]) < 3:
+            results["codebase_slop"]["representable_illegal_states"].append(rel)
+
+        is_ui = any(part in ["components", "views", "pages", "app"] for part in p.parts) or p.suffix.lower() in [".tsx", ".jsx", ".astro", ".html"]
+        if is_ui:
+            if layering_violation_pat.search(content) and len(results["codebase_slop"]["layering_violations"]) < 3:
+                results["codebase_slop"]["layering_violations"].append(rel)
+
+            results["design_slop"]["badge_count"] += len(badge_pat.findall(content))
+            results["design_slop"]["divider_count"] += len(divider_pat.findall(content))
+            results["design_slop"]["opacity_layering_count"] += len(opacity_pat.findall(content))
+            results["design_slop"]["bordered_container_count"] += len(border_container_pat.findall(content))
+
+            for m in italic_pat.finditer(content):
+                if len(results["design_slop"]["italic_buzzwords"]) < 3:
+                    results["design_slop"]["italic_buzzwords"].append({"file": rel, "text": m.group(0)})
+
+            for m in serif_kerning_pat.finditer(content):
+                if len(results["design_slop"]["instrument_serif_negative_kerning"]) < 3:
+                    results["design_slop"]["instrument_serif_negative_kerning"].append({"file": rel, "text": m.group(0)})
+
+            for m in diagram_pat.finditer(content):
+                if len(results["design_slop"]["superfluous_diagrams"]) < 3:
+                    results["design_slop"]["superfluous_diagrams"].append(rel)
+
+            for m in breadcrumb_pat.finditer(content):
+                if len(results["design_slop"]["code_breadcrumbs"]) < 3:
+                    results["design_slop"]["code_breadcrumbs"].append({"file": rel, "text": m.group(0)})
+
+            for m in section_num_pat.finditer(content):
+                if len(results["design_slop"]["section_numbering"]) < 5:
+                    results["design_slop"]["section_numbering"].append({"file": rel, "text": m.group(0)})
+
+    return results
+
+
 def main():
     args = parse_args()
     repo_path = Path(args.repo).resolve()
@@ -281,6 +373,7 @@ def main():
     geo_report = check_structured_data_and_geo(repo_path)
     speed_report = check_speedmaxxing(repo_path)
     prelaunch_report = check_prelaunch_essentials(repo_path)
+    slop_report = check_design_and_codebase_slop(repo_path)
 
     full_report = {
         "repo": str(repo_path),
@@ -288,6 +381,7 @@ def main():
         "geo_and_ai_search": geo_report,
         "speedmaxxing": speed_report,
         "prelaunch_essentials": prelaunch_report,
+        "slop_audit": slop_report,
     }
 
     if args.json:
@@ -332,6 +426,42 @@ def main():
     print(f"  - Privacy Policy: {'YES' if prelaunch_report['has_privacy_policy'] else 'NO'}")
     print(f"  - Terms of Service: {'YES' if prelaunch_report['has_terms_of_service'] else 'NO'}")
     print(f"  - Form bot defense (Turnstile/honeypot): {'YES' if prelaunch_report['has_form_bot_defense'] else ('N/A' if not prelaunch_report['has_forms'] else 'NO (Vulnerable to spam bots)')}")
+
+    print("\n4. Design Slop Indicators (AI UI Clichés):")
+    ds = slop_report["design_slop"]
+    print(f"  - Badge/Tag spam: {ds['badge_count']} instances")
+    print(f"  - Divider lines (Separator/hr/border-t): {ds['divider_count']} instances")
+    print(f"  - Opacity layering instances: {ds['opacity_layering_count']}")
+    print(f"  - Nested bordered containers: {ds['bordered_container_count']}")
+    if ds["italic_buzzwords"]:
+        print(f"  - [WARNING] Italicized copy/buzzwords ({len(ds['italic_buzzwords'])} found):")
+        for ib in ds["italic_buzzwords"][:3]:
+            print(f"    * {ib['file']}: {ib['text']}")
+    if ds["instrument_serif_negative_kerning"]:
+        print(f"  - [WARNING] Serif font + negative kerning ({len(ds['instrument_serif_negative_kerning'])} found):")
+        for sk in ds["instrument_serif_negative_kerning"][:3]:
+            print(f"    * {sk['file']}: {sk['text']}")
+    if ds["section_numbering"]:
+        print(f"  - Section numbering (01 /, Step 01): {len(ds['section_numbering'])} found")
+    if ds["code_breadcrumbs"]:
+        print(f"  - Code breadcrumbs / terminal mockups: {len(ds['code_breadcrumbs'])} found")
+    if ds["superfluous_diagrams"]:
+        print(f"  - Detailed diagrams (Mermaid/SVG): {len(ds['superfluous_diagrams'])} found")
+
+    print("\n5. Codebase Slop Indicators:")
+    cs = slop_report["codebase_slop"]
+    if cs["layer_first_layout"]:
+        print("  - [WARNING] Layer-first folder structure (components/services/utils without feature domain slices)")
+    elif cs["feature_first_layout"]:
+        print("  - Feature-first domain layout: PASS")
+    if cs["god_files"]:
+        print(f"  - [WARNING] God files (> 300 LOC) found ({len(cs['god_files'])} files):")
+        for gf in cs["god_files"][:3]:
+            print(f"    * {gf['file']} ({gf['lines']} lines)")
+    if cs["representable_illegal_states"]:
+        print(f"  - [WARNING] Representable illegal states in: {', '.join(cs['representable_illegal_states'][:3])}")
+    if cs["layering_violations"]:
+        print(f"  - [WARNING] Direct DB queries in UI components: {', '.join(cs['layering_violations'][:3])}")
     print("=" * 70)
 
 

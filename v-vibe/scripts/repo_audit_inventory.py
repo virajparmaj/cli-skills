@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 
@@ -104,6 +105,80 @@ def line_count(path: Path) -> int:
         return sum(1 for _ in handle)
 
 
+def collect_slop_indicators(repo: Path) -> dict:
+    codebase_slop = {
+        "layer_first_layout": False,
+        "feature_first_layout": False,
+        "illegal_state_signals": [],
+        "layering_violations": [],
+        "pass_through_wrappers": [],
+    }
+    design_slop = {
+        "badge_tag_count": 0,
+        "divider_count": 0,
+        "italic_words_count": 0,
+        "instrument_serif_negative_kerning": [],
+        "section_numbering_hits": [],
+        "code_breadcrumbs_hits": [],
+    }
+
+    src_dir = repo / "src"
+    if src_dir.exists():
+        layer_dirs = {"components", "services", "controllers", "models", "hooks", "utils", "views", "pages"}
+        found_layer_dirs = [d.name for d in src_dir.iterdir() if d.is_dir() and d.name in layer_dirs]
+        has_features = (src_dir / "features").is_dir() or (src_dir / "modules").is_dir()
+        codebase_slop["layer_first_layout"] = len(found_layer_dirs) >= 3 and not has_features
+        codebase_slop["feature_first_layout"] = has_features
+
+    illegal_state_pat = re.compile(r'(?:isLoading|loading)\s*:\s*boolean.*?(?:isError|error).*?(?:data|user)', re.DOTALL)
+    layering_violation_pat = re.compile(r'(?:supabase\.from\(|prisma\.[a-zA-Z0-9_]+\.(?:find|create|update)|SELECT\s+.+?\s+FROM)', re.IGNORECASE)
+    badge_pat = re.compile(r'<Badge\b')
+    divider_pat = re.compile(r'(?:<Separator\b|<hr\b|divide-y|border-t\b)')
+    italic_pat = re.compile(r'(?:\*(?:effortlessly|seamlessly|intelligently|instantly|automatically)\*|\bitalic\b)', re.IGNORECASE)
+    serif_kerning_pat = re.compile(r'(?:font-serif|Instrument Serif).*?(?:tracking-tighter|tracking-\[-0\.05em\])', re.IGNORECASE)
+    section_num_pat = re.compile(r'(?:0[1-9]\s*\/|0[1-9]\s*-\s*|Step\s*0?[1-9][:\s-])', re.IGNORECASE)
+    breadcrumb_pat = re.compile(r'(?:Dashboard\s*>\s*[A-Za-z]+|[A-Za-z]+\s*>\s*[A-Za-z]+\s*>\s*[A-Za-z]+)')
+
+    for path in walk_source_files(repo):
+        rel_path = rel(repo, path)
+        is_ui = any(part in ["components", "views", "pages", "app"] for part in path.parts) or path.suffix.lower() in [".tsx", ".jsx"]
+
+        try:
+            content = path.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            continue
+
+        # Codebase slop checks
+        if illegal_state_pat.search(content) and len(codebase_slop["illegal_state_signals"]) < 5:
+            codebase_slop["illegal_state_signals"].append(rel_path)
+
+        if is_ui and layering_violation_pat.search(content) and len(codebase_slop["layering_violations"]) < 5:
+            codebase_slop["layering_violations"].append(rel_path)
+
+        # Design slop checks
+        if is_ui:
+            design_slop["badge_tag_count"] += len(badge_pat.findall(content))
+            design_slop["divider_count"] += len(divider_pat.findall(content))
+            design_slop["italic_words_count"] += len(italic_pat.findall(content))
+
+            for match in serif_kerning_pat.finditer(content):
+                if len(design_slop["instrument_serif_negative_kerning"]) < 3:
+                    design_slop["instrument_serif_negative_kerning"].append({"file": rel_path, "match": match.group(0)})
+
+            for match in section_num_pat.finditer(content):
+                if len(design_slop["section_numbering_hits"]) < 5:
+                    design_slop["section_numbering_hits"].append({"file": rel_path, "match": match.group(0)})
+
+            for match in breadcrumb_pat.finditer(content):
+                if len(design_slop["code_breadcrumbs_hits"]) < 3:
+                    design_slop["code_breadcrumbs_hits"].append({"file": rel_path, "match": match.group(0)})
+
+    return {
+        "codebase_slop": codebase_slop,
+        "design_slop": design_slop,
+    }
+
+
 def collect_inventory(repo: Path, threshold: int, top: int) -> dict:
     notes_files = sorted(
         rel(repo, path) for path in (repo / "notes").glob("*.md")
@@ -179,6 +254,8 @@ def collect_inventory(repo: Path, threshold: int, top: int) -> dict:
         if len(demo_hits) >= 12:
             break
 
+    slop = collect_slop_indicators(repo)
+
     return {
         "repo": str(repo),
         "notes_files": notes_files,
@@ -190,6 +267,8 @@ def collect_inventory(repo: Path, threshold: int, top: int) -> dict:
         "placeholder_tests": placeholder_tests,
         "common_dependencies": dep_hits,
         "demo_mode_hits": demo_hits,
+        "codebase_slop": slop["codebase_slop"],
+        "design_slop": slop["design_slop"],
     }
 
 
@@ -253,6 +332,33 @@ def print_text_report(data: dict, threshold: int) -> None:
             print(f"- {hit['path']}:{hit['line']}  {hit['text']}")
     else:
         print("- none found")
+    print("")
+
+    print("Codebase slop signals:")
+    cs = data.get("codebase_slop", {})
+    if cs.get("layer_first_layout"):
+        print("- Layer-first layout detected (technical layers without feature slices)")
+    elif cs.get("feature_first_layout"):
+        print("- Feature-first layout detected (domain co-location)")
+    else:
+        print("- Layout: standard / flat")
+    if cs.get("illegal_state_signals"):
+        print(f"- Representable illegal states detected in: {', '.join(cs['illegal_state_signals'][:3])}")
+    if cs.get("layering_violations"):
+        print(f"- Layering violations (DB/query direct in UI) detected in: {', '.join(cs['layering_violations'][:3])}")
+    print("")
+
+    print("Design slop signals:")
+    ds = data.get("design_slop", {})
+    print(f"- Badge/tag elements: {ds.get('badge_tag_count', 0)}")
+    print(f"- Dividers (Separator/hr/border-t): {ds.get('divider_count', 0)}")
+    print(f"- Italicized words/classes: {ds.get('italic_words_count', 0)}")
+    if ds.get("instrument_serif_negative_kerning"):
+        print(f"- Instrument serif / negative kerning: {len(ds['instrument_serif_negative_kerning'])} matches")
+    if ds.get("section_numbering_hits"):
+        print(f"- Section numbering hits (01 /, Step 01): {len(ds['section_numbering_hits'])}")
+    if ds.get("code_breadcrumbs_hits"):
+        print(f"- Code breadcrumb hits: {len(ds['code_breadcrumbs_hits'])}")
 
 
 def main() -> None:

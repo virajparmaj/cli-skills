@@ -257,6 +257,97 @@ def check_auth_and_security(repo_path: Path):
     return results
 
 
+def check_codebase_and_design_slop(repo_path: Path):
+    results = {
+        "codebase_slop": {
+            "layer_first_layout": False,
+            "feature_first_layout": False,
+            "god_files": [],
+            "representable_illegal_states": [],
+            "layering_violations": [],
+            "boundary_validation_found": False,
+        },
+        "design_slop": {
+            "badge_count": 0,
+            "divider_count": 0,
+            "italic_buzzwords": [],
+            "instrument_serif_negative_kerning": [],
+            "bordered_container_count": 0,
+            "section_numbering": [],
+            "code_breadcrumbs": [],
+        },
+    }
+
+    # Check directory layout
+    for base in [repo_path / "src", repo_path / "backend", repo_path / "api", repo_path / "app"]:
+        if base.exists() and base.is_dir():
+            layer_dirs = {"controllers", "services", "models", "routes", "views", "components", "utils"}
+            found = [d.name for d in base.iterdir() if d.is_dir() and d.name in layer_dirs]
+            has_features = (base / "features").is_dir() or (base / "modules").is_dir() or (base / "domains").is_dir()
+            if len(found) >= 3 and not has_features:
+                results["codebase_slop"]["layer_first_layout"] = True
+            if has_features:
+                results["codebase_slop"]["feature_first_layout"] = True
+
+    illegal_state_pat = re.compile(r'(?:isLoading|loading)\s*:\s*boolean.*?(?:isError|error).*?(?:data|user)', re.DOTALL)
+    layering_violation_pat = re.compile(r'(?:supabase\.from\(|prisma\.[a-zA-Z0-9_]+\.(?:find|create|update)|SELECT\s+.+?\s+FROM)', re.IGNORECASE)
+    validation_pat = re.compile(r'(?:z\.object|BaseModel|class-validator|joi\.object|yup\.object)')
+    badge_pat = re.compile(r'<Badge\b')
+    divider_pat = re.compile(r'(?:<Separator\b|<hr\b|divide-y|border-t\b)')
+    italic_pat = re.compile(r'(?:\*(?:effortlessly|seamlessly|intelligently|instantly|automatically)\*|\bitalic\b)', re.IGNORECASE)
+    serif_kerning_pat = re.compile(r'(?:font-serif|Instrument Serif).*?(?:tracking-tighter|tracking-\[-0\.05em\])', re.IGNORECASE)
+    border_container_pat = re.compile(r'border\s+border-border\s+rounded-')
+    section_num_pat = re.compile(r'(?:0[1-9]\s*\/|0[1-9]\s*-\s*|Step\s*0?[1-9][:\s-])', re.IGNORECASE)
+    breadcrumb_pat = re.compile(r'(?:Dashboard\s*>\s*[A-Za-z]+|[A-Za-z]+\s*>\s*[A-Za-z]+\s*>\s*[A-Za-z]+)')
+
+    for p in walk_files(repo_path):
+        if p.suffix.lower() not in APP_SOURCE_SUFFIXES:
+            continue
+        rel = str(p.relative_to(repo_path))
+
+        try:
+            content = p.read_text(errors="ignore")
+        except Exception:
+            continue
+
+        lines = content.splitlines()
+        if len(lines) > 300 and len(results["codebase_slop"]["god_files"]) < 5:
+            results["codebase_slop"]["god_files"].append({"file": rel, "lines": len(lines)})
+
+        if illegal_state_pat.search(content) and len(results["codebase_slop"]["representable_illegal_states"]) < 3:
+            results["codebase_slop"]["representable_illegal_states"].append(rel)
+
+        if validation_pat.search(content):
+            results["codebase_slop"]["boundary_validation_found"] = True
+
+        is_ui = any(part in ["components", "views", "pages", "app"] for part in p.parts) or p.suffix.lower() in [".tsx", ".jsx"]
+        if is_ui:
+            if layering_violation_pat.search(content) and len(results["codebase_slop"]["layering_violations"]) < 3:
+                results["codebase_slop"]["layering_violations"].append(rel)
+
+            results["design_slop"]["badge_count"] += len(badge_pat.findall(content))
+            results["design_slop"]["divider_count"] += len(divider_pat.findall(content))
+            results["design_slop"]["bordered_container_count"] += len(border_container_pat.findall(content))
+
+            for m in italic_pat.finditer(content):
+                if len(results["design_slop"]["italic_buzzwords"]) < 3:
+                    results["design_slop"]["italic_buzzwords"].append({"file": rel, "text": m.group(0)})
+
+            for m in serif_kerning_pat.finditer(content):
+                if len(results["design_slop"]["instrument_serif_negative_kerning"]) < 3:
+                    results["design_slop"]["instrument_serif_negative_kerning"].append({"file": rel, "text": m.group(0)})
+
+            for m in section_num_pat.finditer(content):
+                if len(results["design_slop"]["section_numbering"]) < 3:
+                    results["design_slop"]["section_numbering"].append({"file": rel, "text": m.group(0)})
+
+            for m in breadcrumb_pat.finditer(content):
+                if len(results["design_slop"]["code_breadcrumbs"]) < 3:
+                    results["design_slop"]["code_breadcrumbs"].append({"file": rel, "text": m.group(0)})
+
+    return results
+
+
 def main():
     args = parse_args()
     repo_path = Path(args.repo).resolve()
@@ -269,6 +360,7 @@ def main():
     dist_systems = check_distributed_systems_pillars(repo_path)
     db = check_database_hygiene(repo_path)
     auth_sec = check_auth_and_security(repo_path)
+    slop_report = check_codebase_and_design_slop(repo_path)
 
     full_report = {
         "repo": str(repo_path),
@@ -276,6 +368,7 @@ def main():
         "distributed_systems": dist_systems,
         "database": db,
         "auth_and_security": auth_sec,
+        "slop_audit": slop_report,
     }
 
     if args.json:
@@ -325,6 +418,38 @@ def main():
     print(f"  - Sentry / Error Monitoring: {'CONFIGURED' if auth_sec['error_tracking_found'] else 'MISSING (Blind to production crashes)'}")
     if auth_sec["leaking_stack_traces"]:
         print(f"  - [WARNING] Possible stack trace leakage to client: {', '.join(auth_sec['leaking_stack_traces'][:3])}")
+
+    print("\n5. Codebase Slop Indicators (The 9 Core Antipatterns):")
+    cs = slop_report["codebase_slop"]
+    if cs["layer_first_layout"]:
+        print("  - [WARNING] Layer-first folder structure (controllers/services/models without feature slices)")
+    elif cs["feature_first_layout"]:
+        print("  - Feature-first domain layout: PASS")
+    if cs["god_files"]:
+        print(f"  - [WARNING] God files (> 300 LOC) found ({len(cs['god_files'])} files):")
+        for gf in cs["god_files"][:3]:
+            print(f"    * {gf['file']} ({gf['lines']} lines)")
+    if cs["representable_illegal_states"]:
+        print(f"  - [WARNING] Representable illegal states in: {', '.join(cs['representable_illegal_states'][:3])}")
+    if cs["layering_violations"]:
+        print(f"  - [WARNING] Direct DB queries in UI components: {', '.join(cs['layering_violations'][:3])}")
+    print(f"  - Boundary validation (Zod/Pydantic/Joi): {'FOUND' if cs['boundary_validation_found'] else 'NOT DETECTED AT INGRESS'}")
+
+    print("\n6. Dashboard Design Slop Indicators:")
+    ds = slop_report["design_slop"]
+    print(f"  - Badge/Tag spam: {ds['badge_count']} instances")
+    print(f"  - Divider lines (Separator/hr/border-t): {ds['divider_count']} instances")
+    print(f"  - Nested bordered containers: {ds['bordered_container_count']}")
+    if ds["italic_buzzwords"]:
+        print(f"  - [WARNING] Italicized copy/buzzwords ({len(ds['italic_buzzwords'])} found):")
+        for ib in ds["italic_buzzwords"][:3]:
+            print(f"    * {ib['file']}: {ib['text']}")
+    if ds["instrument_serif_negative_kerning"]:
+        print(f"  - [WARNING] Serif font + negative kerning: {len(ds['instrument_serif_negative_kerning'])} found")
+    if ds["section_numbering"]:
+        print(f"  - Section numbering (01 /, Step 01): {len(ds['section_numbering'])} found")
+    if ds["code_breadcrumbs"]:
+        print(f"  - Code breadcrumbs / terminal mockups: {len(ds['code_breadcrumbs'])} found")
     print("=" * 70)
 
 

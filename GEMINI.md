@@ -46,8 +46,8 @@ When the user enters or mentions a skill or folder name (e.g., `v-git`, `v-auth`
 - `v-ux`: UX trust, loading/empty/error states, and user flow completeness audit.
 - `v-venv-doctor`: Python virtual environment diagnosis on Apple Silicon.
 - `v-vercel-doctor`: Diagnose local vs Vercel production deployment divergence.
-- `v-vibe`: Post-vibe code maintainability and architecture debt audit.
-- `v-vibe-app`: Post-vibe SaaS & backend audit (19 distributed systems pillars, 80+ enterprise readiness, pre-launch 20).
+- `v-vibe`: Post-vibe code maintainability, codebase slop, and design slop architecture debt audit.
+- `v-vibe-app`: Post-vibe SaaS & backend audit (19 distributed systems pillars, 80+ enterprise readiness, codebase slop, pre-launch 20).
 - `v-vibe-macos`: Post-vibe macOS desktop audit (App Sandbox, entitlements, PrivacyInfo.xcprivacy, atomic writes, WAL mode).
 - `v-vibe-ml`: Post-vibe AI/LLM/agent audit (prompt injection, tenant spend caps, model fallback, evals, RAG isolation).
-- `v-vibe-web`: Post-vibe website & marketing audit (GEO/AI search discovery, 20-point speedmaxxing, Core Web Vitals).
+- `v-vibe-web`: Post-vibe website & marketing audit (GEO/AI search discovery, 20-point speedmaxxing, design slop, Core Web Vitals).

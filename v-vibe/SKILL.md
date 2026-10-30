@@ -1,9 +1,17 @@
 ---
 name: v-vibe
-description: "Review-only post-vibe-code architecture and maintainability audit for Vite/React/TypeScript apps with Tailwind/shadcn and optional Supabase, FastAPI, or Vercel backends. First read repo context files (CLAUDE.md, notes/*, README.md, PRODUCTION_READY.md) and do not repeat known issues unless there is a delta. Map stack/auth/data/tooling, inspect architecture debt, dead code/deps, demo-vs-prod splits, state/type drift, config/doc drift, bundle health, and tests. Output verified findings with file refs, severity, smallest fix, missing tests, cleanup backlog, reusable rules, and what's good. Trigger on audit repo, post-vibe review, maintainability audit, architecture debt."
+description: "Review-only post-vibe-code architecture and maintainability audit for Vite/React/TypeScript apps with Tailwind/shadcn and optional Supabase, FastAPI, or Vercel backends. First read repo context files (CLAUDE.md, notes/*, README.md, PRODUCTION_READY.md) and do not repeat known issues unless there is a delta. Map stack/auth/data/tooling, inspect architecture debt, codebase slop indicators (implicit coupling, layer-first folders, duplication, representable illegal states, god files, shotgun surgery, layering violations, pass-through wrappers, errors/validation not at the boundary), design slop indicators (tags/badge spam, italicized words, instrument serif + negative kerning, over-detailed UI, dividers, multiple color opacities, containers with borders, superfluous diagrams, code breadcrumbs, section numbering), dead code/deps, demo-vs-prod splits, state/type drift, config/doc drift, bundle health, and tests. Output verified findings with file refs, severity, smallest fix, missing tests, cleanup backlog, reusable rules, and what's good. Trigger on audit repo, post-vibe review, maintainability audit, architecture debt, codebase slop, design slop."
 ---
 
 # Post-Vibe-Code Architecture Audit
+
+## Practical review and implementation
+
+- Do not design for rare or future cases nobody asked about.
+- For each bug, report **frequency (1-10)** in current usage, **impact (1-10)**, **frequency x impact = score**, and the reachable trigger with evidence. Keep confidence separate from occurrence frequency; hypothetical future requirements are not bugs. Checklist examples are inspection prompts, not automatic findings or severity assignments.
+- Default fix threshold: **5**, unless the user explicitly changes it. **Below 5:** record one deduplicated backlog issue and leave the code alone; use **Deferred issues** in the review if no backlog exists or remote issue creation is not already authorized. Do not block completion or reopen the same issue without new evidence or an explicit request.
+- **5 or above:** propose the smallest verified fix; implement only within the authorized task. Review-only work stays review-only. Preserve existing report structure and add the scores to each finding. Required checks and explicitly requested fixes still apply.
+- Pass evidence, scores, threshold, and deferrals to the fixer. Stop after the requested scope is covered and required checks pass; re-review affected paths only when changes, failures, or unresolved evidence justify it.
 
 Use this skill when the task is to inspect a repo, not to fix it. Stay in review mode unless the user explicitly asks for implementation.
 
@@ -16,7 +24,7 @@ Run this skill in your highest-effort mode, whatever model you are. Prefer corre
 - **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
 - **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
 - **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Exhaust the search.** For discovery, keep going until two consecutive passes surface nothing new; do not stop at the first plausible batch. Never silently cap coverage — state what you skipped and why.
+- **Bound the review.** Cover the requested scope and verify plausible findings. Stop once that scope is covered and required checks pass; expand or repeat only for changed code, failed checks, or unresolved evidence. State coverage gaps; do not chase speculative cases to fill a report.
 - **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
 - **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
 - **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
@@ -59,6 +67,29 @@ Run this skill in your highest-effort mode, whatever model you are. Prefer corre
      - build and test toolchain
 
 3. Inspect architecture and maintainability debt.
+   - Codebase Slop Indicators (The 9 Core Antipatterns):
+     - **Implicit coupling**: Modules secretly relying on global variables, hidden side-effects, implicit execution order, or shared localStorage keys without typed contracts.
+     - **Layer-first folders**: Structuring directories by technical layer (`components/`, `services/`, `controllers/`, `models/`, `hooks/`, `utils/`) rather than by domain/feature slices (`features/auth/`, `features/billing/`), breaking co-location and causing sprawling imports.
+     - **Duplication**: Copy-pasting logic across files (slightly altered utility functions, repeated fetch wrappers, duplicated form handlers) because the AI lacked global codebase context across turns.
+     - **Representable illegal states**: Modeling state with loose, unconstrained types allowing mutually exclusive values simultaneously (e.g. `{ isLoading: true, error: Error, data: User }` where all three can be set, instead of discriminated unions `{ status: 'loading' } | { status: 'error' } | { status: 'success' }`).
+     - **God files**: Sprawling files (>300 LOC, often 1,000-2,000+ LOC) accumulating unrelated components, handlers, hooks, and helpers that the AI kept appending to.
+     - **Shotgun surgery**: A single conceptual change (e.g. adding a new user role or status) requires modifying 8-15 disparate files because domain concepts are fragmented everywhere.
+     - **Layering violations**: Presentation components invoking database queries or backend clients directly; backend models importing HTTP request/response DTOs.
+     - **Pass-through wrappers**: Trivial one-line wrapper functions, empty abstractions, and facade services that do nothing except delegate to another function without adding behavior, validation, or transformation.
+     - **Errors / validation not at the boundary**: Checking inputs deep inside nested business logic or database layers instead of parsing and validating strictly at system boundaries (API ingress, form submission, external API response) using schemas (Zod/Pydantic).
+
+   - Design Slop Indicators (The 10 UI Smells):
+     - **Tags / badge spam**: Gratuitous `<Badge>`, pill tags, and status chips plastered on every single card and heading ("NEW", "FEATURE", "AI-POWERED", "BETA", "v1.2") to simulate visual density.
+     - **Italicized words**: Arbitrary italicization in headings or body copy to simulate editorial design (*effortlessly*, *seamlessly*, *intelligently*, *instantly*).
+     - **Instrument serif, negative kerning**: Overused trendy AI font pairing (serif display headers with `tracking-tighter` / negative letter spacing) applied indiscriminately regardless of brand identity.
+     - **Over the top detailed UI**: Excessive pseudo-complex dashboard metrics, fake activity feeds, micro-widgets, and telemetry counters on simple apps that don't need them.
+     - **Dividers**: Gratuitous horizontal and vertical hairline rules (`<Separator />`, `divide-y`, `border-t`, `border-b`) cutting every minor component into disconnected compartments.
+     - **Multiple color shades and opacities**: Chaotic color hierarchy with arbitrary alpha opacities (`bg-opacity-50`, `text-white/70`, `text-muted-foreground/60`, five different shades of gray/neutral in one view).
+     - **Containers with borders**: "Box-in-a-box-in-a-box" card nesting, where every single paragraph, stat, or list item is wrapped in a `border border-border rounded-lg bg-card p-4`.
+     - **Diagrams (the more detailed, the worse)**: Superfluous ASCII/SVG/Mermaid architecture diagrams, node graphs, or decorative flowcharts that add clutter without semantic or functional value.
+     - **Code breadcrumbs**: Fake terminal prompts, decorative pseudo-code blocks, or deeply nested decorative breadcrumbs (`Dashboard > Analytics > Overview > Metric 1`) cluttering user workflow.
+     - **Section numbering**: Robotic numbered sections ("01 / Features", "02 / Architecture", "03 / Pricing", "Step 01 - Onboarding") typical of generic AI template generation.
+
    - Oversized files and god modules:
      - Flag files above roughly 300 LOC.
      - Include the actual line count and the responsibilities that are tangled.

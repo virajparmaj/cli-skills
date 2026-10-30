@@ -78,3 +78,15 @@ Before your vibe-coded application touches a paying customer or an enterprise bu
 - [ ] **Webhook Signature Verification**: Every incoming webhook (Stripe, GitHub, Shopify) validates HMAC signatures and rejects unverified calls.
 - [ ] **API Versioning**: Customer-facing APIs use versioned pathing (`/v1/`) or headers to prevent breaking customer integrations.
 - [ ] **Customer API Keys & Quotas**: Revocable API keys, hashed storage (like passwords), with per-key rate limits and usage analytics.
+
+## 7. Codebase & Design Slop Antipatterns
+- [ ] **Zero Implicit Coupling**: No hidden state dependencies, unversioned localStorage, or implicit call-order assumptions.
+- [ ] **Feature-First / Domain Co-Location**: Code structured around feature slices (`features/billing`, `features/auth`) rather than purely technical layer-first folders (`controllers`, `services`, `models`).
+- [ ] **Zero Logic Duplication**: Reusable domain logic extracted into canonical utilities rather than copy-pasted across endpoints.
+- [ ] **Unrepresentable Illegal States**: State and domain entities modeled with discriminated unions; no loose conflicting boolean flags (`isLoading`, `isError`, `data`).
+- [ ] **God File Decomposition**: No sprawling 1,000+ line modules accumulating unrelated responsibilities.
+- [ ] **Shotgun Surgery Elimination**: Domain concepts (status enums, roles) defined in a single source of truth rather than duplicated across 12 files.
+- [ ] **Layering Hygiene**: Clean boundary separation; UI routes never call raw database clients; domain models never import HTTP transport DTOs.
+- [ ] **No Pass-Through Wrappers**: Elimination of empty 1-line facade functions that add zero logic, validation, or transformation.
+- [ ] **Boundary Validation**: Comprehensive schema validation (Zod/Pydantic) enforced strictly at API ingress boundaries rather than scattered deep in database methods.
+- [ ] **Elimination of Design Slop**: Dashboards stripped of gratuitous badge spam, italicized buzzwords, serif/negative kerning clichés, excessive hairline dividers, muddy opacity layering, and box-in-a-box card nesting.
