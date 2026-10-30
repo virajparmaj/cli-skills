@@ -1,1 +1,21 @@
+# OS metadata
+.DS_Store
 *.DS_Store
+Thumbs.db
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# R history & temp
+.Rhistory
+.Rdata
+
+# Environment & logs
+*.log
+*.tmp
+.env
+.env.*
+!.env.example
