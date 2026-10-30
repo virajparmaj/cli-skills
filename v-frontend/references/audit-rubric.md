@@ -324,3 +324,30 @@ Use when the app loads external scripts (analytics, ads, chat widgets, CDN libra
 - Check whether they block rendering or the critical path.
 - Verify `async` or `defer` attributes are present.
 - Estimate combined size and load-time cost of third-party scripts.
+
+### Add-On: Design Slop & Component Codebase Slop
+
+Use when evaluating vibe-coded UIs for visual clichés and architectural antipatterns.
+
+1. **Design Slop Indicators**:
+   - **Tags / Badge Spam**: Gratuitous `<Badge>` on every card, feature, or metric.
+   - **Italicized Words**: Arbitrary italics in headings (*seamlessly*, *effortlessly*).
+   - **Instrument Serif + Negative Kerning**: Serif display headings with `tracking-tighter` (`-0.05em`).
+   - **Over the Top Detailed UI**: Faux telemetry graphs, mock terminal feeds, and micro-metrics on simple views.
+   - **Dividers Everywhere**: Excessive `<Separator />` and hairline rules fragmenting layouts instead of clean whitespace.
+   - **Multiple Color Shades and Opacities**: Uncalibrated alpha opacities (`text-white/70`, `bg-neutral-800/40`) degrading contrast.
+   - **Containers with Borders (Box-in-a-Box)**: Deeply nested bordered cards (`border border-border rounded-lg bg-card p-4`).
+   - **Diagrams (The More Detailed, the Worse)**: Superfluous Mermaid, SVG, or ASCII diagrams adding visual clutter.
+   - **Code Breadcrumbs**: Fake terminal prompts or deeply nested decorative breadcrumbs.
+   - **Section Numbering**: Robotic numbered headers ("01 / Features", "02 / Architecture", "Step 01").
+
+2. **Codebase Slop Indicators**:
+   - **Implicit Coupling**: Hidden dependencies on mutable state or unversioned localStorage.
+   - **Layer-First Folders**: Structuring code by technical layer (`components/`, `services/`, `utils/`) rather than feature domain slices.
+   - **Duplication**: Copy-pasted handlers, query wrappers, and formatters across files.
+   - **Representable Illegal States**: State modeled with loose booleans (`isLoading`, `isError`, `data`) instead of discriminated unions.
+   - **God Files**: Sprawling files (> 300 LOC, often 1,000+ LOC) with mixed concerns.
+   - **Shotgun Surgery**: Modifying 10+ files for a single conceptual change.
+   - **Layering Violations**: UI components invoking database or API clients directly in render bodies.
+   - **Pass-Through Wrappers**: Redundant 1-line facade functions adding no logic.
+   - **Errors / Validation Not at Boundary**: Input validation buried deep in helper methods rather than at form/API boundaries.

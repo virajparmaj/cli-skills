@@ -120,6 +120,21 @@ If the repo was scaffolded or heavily generated, look for:
 - Generic TODO comments or generator signatures
 - Default favicons, OG tags, or metadata that no longer match the product
 
+### G. Design Slop & Visual Trust Clichés
+
+Vibe-coded UIs frequently exhibit artificial design complexity that harms professional credibility:
+
+- **Tags / Badge Spam**: Gratuitous `<Badge>` and status chips ("NEW", "AI-POWERED", "BETA") plastered indiscriminately on every card or header.
+- **Italicized Words**: Arbitrary italicization in copy to fake editorial flair (*effortlessly*, *seamlessly*, *intelligently*).
+- **Instrument Serif + Negative Kerning**: Overused trendy serif display headers with `tracking-tighter` (`-0.05em`) that collide on mobile screens.
+- **Over the Top Detailed UI**: Excessive telemetry counters, faux activity monitors, and micro-charts on simple workflows.
+- **Dividers Everywhere**: Hairline rules (`<Separator />`, `divide-y`, `border-t`) slicing layouts into micro-compartments instead of using whitespace.
+- **Multiple Color Shades and Opacities**: Uncalibrated alpha opacities (`text-white/70`, `bg-neutral-800/40`) degrading contrast and violating WCAG standards.
+- **Containers with Borders (Box-in-a-Box)**: Deeply nested bordered cards (`border border-border rounded-lg bg-card p-4`) creating claustrophobic visual fatigue.
+- **Diagrams (The More Detailed, the Worse)**: Superfluous Mermaid, SVG, or ASCII charts that add clutter without functional meaning.
+- **Code Breadcrumbs**: Fake terminal prompts or deeply nested decorative breadcrumbs cluttering the viewport.
+- **Section Numbering**: Robotic numbered headers ("01 / Overview", "02 / Features", "Step 01") that break when content is reordered.
+
 ## Output Contract
 
 ### Section 1: Project Context Summary
