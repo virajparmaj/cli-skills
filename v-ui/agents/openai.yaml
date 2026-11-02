@@ -1,0 +1,7 @@
+interface:
+  display_name: "V UI"
+  short_description: "Choose UI patterns, components, CSS, and demo guidance"
+  default_prompt: "Use $v-ui to handle this UI task, selecting only the relevant component, CSS, and demo guidance."
+
+policy:
+  allow_implicit_invocation: true
