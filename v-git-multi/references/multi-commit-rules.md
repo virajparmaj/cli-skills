@@ -1,5 +1,9 @@
 # Multi-Commit Split Rules
 
+## Personal project push policy
+
+Personal projects use `main` directly; do not invent a feature branch or PR. Open-source repositories/contributions and NGO data work (`/Users/veerr_89/Work/ngo/data`, remote identity `github.com/saayam-for-all/data`, including clones/worktrees) follow their contribution branch/PR workflow. Read the skill entrypoint's policy for safe branch integration. Examples assume a personal project already on `main`; substitute the verified contribution branch/remote for exceptions. If the user asks to actually commit/push, execute and report the result; this fenced-block format applies to draft requests only.
+
 Group the working tree's current changes (staged + unstaged + untracked) into not more than 7 logical commits (high number only if sensible), each in Veer's strict commit format, and emit them as one paste-ready bash sequence. This extends the single-commit contract in [v-git/references/commit-rules.md](../../v-git/references/commit-rules.md) to N commits — the per-commit title and body format is identical.
 
 ## Per-commit format (reused from v-git, unchanged)
@@ -74,7 +78,7 @@ git commit -m "<type> : <summary>" \
 git push origin main
 ```
 
-- Exactly one `git push origin main` at the very end, after all commits.
+- Exactly one push at the very end, after all commits: `git push origin main` for personal projects, or the verified contribution branch/remote for an exception.
 - Blank line between each `git commit` and the next `git add`.
 
 ## When NOT to split

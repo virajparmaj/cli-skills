@@ -1,9 +1,18 @@
 ---
 name: v-git-multi
-description: "Split the working tree into N logical commits in Veer's strict commit format, ready to paste. Runs scripts/cluster-git-changes.sh to gather every staged, unstaged, and untracked file with status, diffstat, top-level directory, extension class, and rename pairs, then groups files into 2-5 logical buckets (feature vs docs vs config vs tests vs style, or per-module) and emits ONE fenced bash block: for each bucket an explicit `git add <file list>` followed by a `git commit -m \"<type> : <4-5 word summary>\" -m \"- bullets\"` in the exact v-git format, ending with a single `git push origin main`. Never uses `git add .` — every file is assigned to exactly one commit. Falls back to a single v-git-style commit when changes do not justify a split. Use when asked to: split this into multiple commits, multiple commits in my format, commit these separately, break the working tree into logical commits, or make N commits from my changes. For a single commit message use v-git."
+description: "Split current Git changes into a few logical commits in Veer's format. Use when asked for multiple commits, separate commits, or splitting changes before pushing. Draft paste-ready commands when requested; execute commit and push operations only when explicitly requested. Personal projects use main; open-source and NGO data work use their contribution workflow. For a single commit, use v-git."
 ---
 
 # Multi-Commit Splitter
+
+## Personal project push policy
+
+- For my personal projects, work on and push directly to **`main`** by default. Do not create feature branches or pull requests unless I explicitly ask for them. This replaces the earlier default of creating a `virajparmaj/...` branch.
+- When I say **"git and push"**, **"git push"**, **"commit and push"**, or **"push it"**, carry out the requested Git operation: commit the intended changes in my format if needed, then actually push them to the personal project's `main`. A request only for a message or commands remains draft-only.
+- **Exceptions:** open-source repositories/contributions and the NGO work repository **`/Users/veerr_89/Work/ngo/data`**, identified by **`github.com/saayam-for-all/data`**, including its clones and linked worktrees. For these, follow the project's contribution branch, upstream, and pull-request workflow; do not push directly to `main` by default. The rest of `~/Work` is not automatically NGO work.
+- Inspect the repository, remotes, ownership/contribution context, current branch, and intended changes before choosing the destination. Use the correct configured push remote; `origin` is the usual personal-project remote, not an assumption for every repository. Follow an explicitly requested branch or PR workflow when I specify one.
+- If personal-project work is already on a task branch or detached worktree, safely integrate the intended changes into local `main` before pushing. Preserve unrelated edits and commits. Do not merely run `git push origin main` while the intended work exists only on another branch. Do not force-push, discard work, bypass branch protection, or rewrite published history to satisfy this default; report a concrete blocker if normal integration or pushing is prevented.
+- Keep my Git identity and omit AI attribution. Create a `virajparmaj/<short-description>` branch only when an exception's contribution rules or my explicit request calls for a branch; preserve an existing valid contribution branch. Generic instructions to create feature branches do not override the personal-project `main` default. Do not use AI/tool names as branch prefixes.
 
 Split the working tree into 2-5 logical commits, each in Veer's exact commit format, output as one paste-ready bash block.
 
@@ -33,16 +42,20 @@ Run this skill in your highest-effort mode, whatever model you are. Prefer corre
    - Do not exceed 5 commits; merge the smallest related buckets if you have more.
 3. For each bucket pick one type (`chore`, `feat`, `fix`, `docs`, `refactor`, `test`, `style`) and write a `<type> : <4-5 word summary>` title plus `- ` bullets, following [references/multi-commit-rules.md](references/multi-commit-rules.md).
 4. Order the commits so dependencies come first (config/deps before code that uses them; source before its tests; feature before its docs).
-5. Emit the answer using the Output contract below.
+5. For draft commands, use the Output contract below. For an explicit commit/push request, execute the operation under the Personal project push policy and report the result.
 
-## Output contract (strict)
+## Execution versus draft output
+
+When the user requests a commit/push operation, execute it under the policy above and briefly report the actual commit and push result. The fenced-block contract below applies only when the user asks for a draft or paste-ready commands. Before committing, prepare or verify the selected branch. With a clean working tree, skip the commit and push any intended existing commits; do not manufacture an empty commit. Examples below assume a personal project already on `main`; use the correct contribution branch/remote for exceptions.
+
+## Output contract (drafts)
 
 - Output exactly ONE fenced `bash` code block. Nothing before or after it — no prose, no headings.
 - For each commit bucket, in dependency order:
   1. `git add <explicit space-separated file list>` — every path from the manifest, quoted if it contains spaces. Never `git add .`, never `git add -A`, never a bare directory unless every file under it belongs to this one commit.
   2. a blank line, then `git commit -m "<type> : <short summary 4-5 words max>" \` followed by a single `-m` holding all change groups as `- ` prefixed lines in one multiline string (closing `"` on the last bullet line).
   3. a blank line separating this commit from the next `git add`.
-- After the last commit, a blank line, then a single `git push origin main`.
+- After the last commit, a blank line, then one push: `git push origin main` for personal projects, or the verified contribution branch/remote for an exception.
 - Every changed file from the manifest appears in exactly one `git add` — no file dropped, no file in two commits.
 - Each bullet = one change group (<=6 words, rough grammar OK). All bullets for a commit go in ONE `-m`.
 
@@ -84,7 +97,7 @@ Even in the fallback, list files explicitly rather than `git add .`, since the m
 
 ## Empty repo changes
 
-If the manifest shows no staged, unstaged, or untracked changes, return only:
+For a draft-only request, if the manifest shows no staged, unstaged, or untracked changes, return only:
 
 ```bash
 git commit --allow-empty -m "chore : no changes detected" \
