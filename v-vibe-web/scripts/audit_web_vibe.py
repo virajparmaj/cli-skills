@@ -29,6 +29,7 @@ IGNORE_DIRS = {
     "__pycache__",
     ".venv",
     "venv",
+    "references",
 }
 
 WEB_EXTENSIONS = {
@@ -57,6 +58,8 @@ def walk_files(repo_path: Path):
     for root, dirs, files in os.walk(repo_path):
         dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
         for f in files:
+            if f.endswith("SKILL.md") or f.endswith("GEMINI.md"):
+                continue
             p = Path(root) / f
             yield p
 
@@ -70,6 +73,7 @@ def check_robots_txt(repo_path: Path):
         "path": str(robots_files[0].relative_to(repo_path)) if robots_files else None,
         "blocks_ai_bots": [],
         "allows_ai_bots": [],
+        "googlebot_blocked": False,
         "has_sitemap": False,
         "issues": [],
     }
@@ -79,7 +83,7 @@ def check_robots_txt(repo_path: Path):
         return result
 
     content = robots_files[0].read_text(errors="ignore")
-    ai_bots = ["GPTBot", "OAI-SearchBot", "ClaudeBot", "PerplexityBot", "Applebot-Extended"]
+    ai_bots = ["Googlebot", "GPTBot", "OAI-SearchBot", "ClaudeBot", "PerplexityBot", "Applebot-Extended"]
 
     current_agents = []
     lines = content.splitlines()
@@ -91,6 +95,8 @@ def check_robots_txt(repo_path: Path):
         elif line_clean.startswith("disallow:"):
             rule = line.split(":", 1)[1].strip()
             for agent in current_agents:
+                if (agent.lower() in ["*", "googlebot"]) and rule == "/":
+                    result["googlebot_blocked"] = True
                 for target_bot in ai_bots:
                     if agent.lower() == target_bot.lower() and rule == "/":
                         result["blocks_ai_bots"].append(f"{target_bot} disallowed from root")
@@ -361,6 +367,133 @@ def check_design_and_codebase_slop(repo_path: Path):
     return results
 
 
+def check_google_technical_seo(repo_path: Path):
+    results = {
+        "rendering_architecture": "Client-Side SPA (Empty <div> crawler risk)",
+        "sitemap_files": [],
+        "noindex_tags": [],
+        "canonical_tags": [],
+        "h1_issues": {
+            "missing_h1": [],
+            "multiple_h1": [],
+        },
+        "images_missing_alt": [],
+        "schema_types": [],
+        "has_breadcrumbs": False,
+        "eeat_signals": {
+            "has_author_byline": False,
+            "has_author_bio_page": False,
+            "has_person_schema": False,
+        },
+        "ai_slop_phrases": [],
+    }
+
+    # 1. Framework detection in package.json
+    package_files = list(repo_path.glob("**/package.json"))
+    package_files = [p for p in package_files if not any(part in IGNORE_DIRS for part in p.parts)]
+    for pf in package_files:
+        try:
+            data = json.loads(pf.read_text(errors="ignore"))
+            deps = {**data.get("dependencies", {}), **data.get("devDependencies", {})}
+            if "next" in deps:
+                results["rendering_architecture"] = "Next.js (SSR / SSG Supported)"
+            elif "astro" in deps or "@astrojs/core" in deps:
+                results["rendering_architecture"] = "Astro (Zero-JS SSG Default)"
+            elif "@remix-run/react" in deps:
+                results["rendering_architecture"] = "Remix (SSR Supported)"
+            elif "nuxt" in deps:
+                results["rendering_architecture"] = "Nuxt (SSR Supported)"
+            elif "@sveltejs/kit" in deps:
+                results["rendering_architecture"] = "SvelteKit (SSR Supported)"
+            elif "gatsby" in deps:
+                results["rendering_architecture"] = "Gatsby (SSG Supported)"
+        except Exception:
+            pass
+
+    # 2. Sitemap files & Author pages
+    for p in walk_files(repo_path):
+        name_lower = p.name.lower()
+        if name_lower in ["sitemap.xml", "sitemap.ts", "sitemap.js"] or "sitemap-index" in name_lower:
+            results["sitemap_files"].append(str(p.relative_to(repo_path)))
+        if "author" in name_lower and any(term in name_lower for term in [".html", ".tsx", ".jsx", ".md", ".mdx"]):
+            results["eeat_signals"]["has_author_bio_page"] = True
+
+    # Regex patterns
+    noindex_pat = re.compile(r'(?:<meta[^>]*name=["\']robots["\'][^>]*content=["\'][^"\']*noindex|X-Robots-Tag:\s*noindex)', re.IGNORECASE)
+    canonical_pat = re.compile(r'(?:<link[^>]*rel=["\']canonical["\']|canonical:\s*["\']https?:\/\/|metadata\.alternates\.canonical)', re.IGNORECASE)
+    h1_pat = re.compile(r'<h1\b|#\s+', re.IGNORECASE)
+    alt_pat = re.compile(r'<img\s+([^>]+)>', re.IGNORECASE)
+    breadcrumb_pat = re.compile(r'(?:<nav[^>]*aria-label=["\']breadcrumb|BreadcrumbList|from ["\'].*?breadcrumb)', re.IGNORECASE)
+    author_pat = re.compile(r'(?:rel=["\']author["\']|class=["\'][^"\']*author-bio|@type["\']\s*:\s*["\']Person["\']|author:\s*["\'][^"\']+["\'])', re.IGNORECASE)
+
+    ai_slop_patterns = [
+        re.compile(r'\bin today[\'’]s fast-paced\b', re.IGNORECASE),
+        re.compile(r'\bdelve into\b', re.IGNORECASE),
+        re.compile(r'\ba testament to\b', re.IGNORECASE),
+        re.compile(r'\bmultifaceted tapestry\b', re.IGNORECASE),
+        re.compile(r'\bit is crucial to remember\b', re.IGNORECASE),
+        re.compile(r'\bseamlessly integrates\b', re.IGNORECASE),
+        re.compile(r'\brevolutionize the way\b', re.IGNORECASE),
+    ]
+
+    for p in walk_files(repo_path):
+        if p.suffix.lower() not in WEB_EXTENSIONS:
+            continue
+        rel = str(p.relative_to(repo_path))
+        try:
+            content = p.read_text(errors="ignore")
+        except Exception:
+            continue
+
+        # Noindex check
+        if noindex_pat.search(content):
+            results["noindex_tags"].append(rel)
+
+        # Canonical check
+        if canonical_pat.search(content):
+            results["canonical_tags"].append(rel)
+
+        # Breadcrumbs
+        if breadcrumb_pat.search(content):
+            results["has_breadcrumbs"] = True
+
+        # E-E-A-T signals
+        if author_pat.search(content):
+            results["eeat_signals"]["has_author_byline"] = True
+            if '"@type": "Person"' in content or "'@type': 'Person'" in content:
+                results["eeat_signals"]["has_person_schema"] = True
+
+        # H1 count in route / page files
+        is_page = any(part in ["pages", "app", "routes", "views"] for part in p.parts)
+        if is_page and p.suffix.lower() in [".tsx", ".jsx", ".html", ".astro", ".md", ".mdx"]:
+            h1_count = len(h1_pat.findall(content))
+            if h1_count == 0 and len(results["h1_issues"]["missing_h1"]) < 5:
+                results["h1_issues"]["missing_h1"].append(rel)
+            elif h1_count > 1 and len(results["h1_issues"]["multiple_h1"]) < 5:
+                results["h1_issues"]["multiple_h1"].append({"file": rel, "count": h1_count})
+
+        # Missing alt attributes
+        for m in alt_pat.finditer(content):
+            tag_content = m.group(1)
+            if 'alt=' not in tag_content:
+                if len(results["images_missing_alt"]) < 8:
+                    results["images_missing_alt"].append({"file": rel, "tag": f"<img {tag_content[:50]}...>"})
+
+        # Schema types
+        for schema_match in re.findall(r'"@type"\s*:\s*"([A-Za-z0-9_]+)"', content):
+            if schema_match in ["FAQPage", "Article", "BlogPosting", "BreadcrumbList", "TechArticle"]:
+                if schema_match not in results["schema_types"]:
+                    results["schema_types"].append(schema_match)
+
+        # AI slop phrases
+        for pat in ai_slop_patterns:
+            m = pat.search(content)
+            if m and len(results["ai_slop_phrases"]) < 5:
+                results["ai_slop_phrases"].append({"file": rel, "match": m.group(0)})
+
+    return results
+
+
 def main():
     args = parse_args()
     repo_path = Path(args.repo).resolve()
@@ -374,6 +507,7 @@ def main():
     speed_report = check_speedmaxxing(repo_path)
     prelaunch_report = check_prelaunch_essentials(repo_path)
     slop_report = check_design_and_codebase_slop(repo_path)
+    google_seo_report = check_google_technical_seo(repo_path)
 
     full_report = {
         "repo": str(repo_path),
@@ -382,6 +516,7 @@ def main():
         "speedmaxxing": speed_report,
         "prelaunch_essentials": prelaunch_report,
         "slop_audit": slop_report,
+        "google_technical_seo": google_seo_report,
     }
 
     if args.json:
@@ -462,6 +597,49 @@ def main():
         print(f"  - [WARNING] Representable illegal states in: {', '.join(cs['representable_illegal_states'][:3])}")
     if cs["layering_violations"]:
         print(f"  - [WARNING] Direct DB queries in UI components: {', '.join(cs['layering_violations'][:3])}")
+
+    print("\n6. Google Technical SEO & Search Console Readiness (The 20-Point Checklist):")
+    print(f"  - Rendering Architecture: {google_seo_report['rendering_architecture']}")
+    if google_seo_report["sitemap_files"]:
+        print(f"  - XML Sitemap: FOUND ({', '.join(google_seo_report['sitemap_files'])})")
+    else:
+        print("  - XML Sitemap: MISSING (Create sitemap.xml to enable URL discovery)")
+    print(f"  - Googlebot Access in robots.txt: {'BLOCKED from root / [CRITICAL]' if robots_report.get('googlebot_blocked') else 'ALLOWED / UNBLOCKED'}")
+    if google_seo_report["noindex_tags"]:
+        print(f"  - [CRITICAL] noindex meta tags found in production files ({len(google_seo_report['noindex_tags'])} files):")
+        for nf in google_seo_report["noindex_tags"][:3]:
+            print(f"    * {nf}")
+    else:
+        print("  - noindex Tag Audit: PASS (No accidental noindex tags)")
+    if google_seo_report["canonical_tags"]:
+        print(f"  - Canonical Tags (rel=canonical): IMPLEMENTED ({len(google_seo_report['canonical_tags'])} files)")
+    else:
+        print("  - Canonical Tags: MISSING (Risk of duplicate content penalties)")
+    h1_iss = google_seo_report["h1_issues"]
+    if h1_iss["missing_h1"]:
+        print(f"  - [WARNING] Pages missing <h1> tags ({len(h1_iss['missing_h1'])} pages): {', '.join(h1_iss['missing_h1'][:3])}")
+    if h1_iss["multiple_h1"]:
+        print(f"  - [WARNING] Pages with multiple <h1> tags: {', '.join(item['file'] for item in h1_iss['multiple_h1'][:3])}")
+    if not h1_iss["missing_h1"] and not h1_iss["multiple_h1"]:
+        print("  - <h1> Hierarchy: PASS (Clean single H1 structure)")
+    if google_seo_report["images_missing_alt"]:
+        print(f"  - [WARNING] Images missing alt text ({len(google_seo_report['images_missing_alt'])} instances)")
+    else:
+        print("  - Image alt text: PASS")
+    if google_seo_report["schema_types"]:
+        print(f"  - Structured Data (Schema.org): {', '.join(google_seo_report['schema_types'])}")
+    else:
+        print("  - Structured Data: MISSING FAQPage / Article / Breadcrumb schemas")
+    print(f"  - Breadcrumb Navigation: {'IMPLEMENTED' if google_seo_report['has_breadcrumbs'] else 'MISSING'}")
+    eeat = google_seo_report["eeat_signals"]
+    eeat_status = "DETECTED" if (eeat["has_author_byline"] or eeat["has_author_bio_page"]) else "MISSING (Anonymous content risk)"
+    print(f"  - E-E-A-T Author & Bio Signals: {eeat_status}")
+    if google_seo_report["ai_slop_phrases"]:
+        print(f"  - [WARNING] AI copywriting slop phrases detected ({len(google_seo_report['ai_slop_phrases'])} matches):")
+        for slop in google_seo_report["ai_slop_phrases"][:3]:
+            print(f"    * {slop['file']}: \"{slop['match']}\"")
+    else:
+        print("  - AI Slop Copywriting: PASS (No generic AI filler phrases detected)")
     print("=" * 70)
 
 
