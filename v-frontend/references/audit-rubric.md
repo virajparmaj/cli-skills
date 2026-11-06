@@ -1,5 +1,7 @@
 # Audit Rubric
 
+Apply the entrypoint’s scope, evidence, frequency x impact scoring, threshold (5), and deferral policy. These checks and severity examples guide inspection; they do not prove a bug or require a new feature. Mark inapplicable checks N/A and unavailable evidence UNVERIFIED. Below-threshold issues do not block completion; review-only requests remain read-only.
+
 ## Role
 
 You are a senior frontend performance engineer conducting a post-build
@@ -297,15 +299,25 @@ For each file in `api/`:
    cold start?
 4. Could any function move to edge runtime for faster response?
 
-### Add-On: Core Web Vitals Audit
+### Add-On: Core Web Vitals & Vibe Performance Audit
 
-Use when user asks about page speed, LCP, CLS, or INP.
+Use when user asks about page speed, LCP, CLS, INP, or says *"My website feels slow. Audit the actual application and find what's making it slow."* (Cross-reference full standalone rubric in `v-perf`).
 
-- Identify the Largest Contentful Paint element on the main landing route.
+**Targets:**
+- **LCP**: 2.5 seconds or less.
+- **INP**: under 200 milliseconds.
+- **CLS**: under 0.1.
+
+**Golden Rule:**
+*Fix the biggest real bottlenecks first. Don't optimise random code just to make a report look better. A fast website is not just about a green Lighthouse score. People should actually feel the difference.*
+
+- Identify the Largest Contentful Paint (LCP) element on the main landing route.
 - Check whether that element is render-blocked by fonts, large images, or JavaScript.
-- Look for layout shift causes: images without dimensions, dynamically injected content, font swaps.
-- Identify long tasks that could affect Interaction to Next Paint: heavy event handlers, synchronous layout reads, or blocking hydration.
+- **Hero Image Anti-Pattern**: Verify the main hero image is NOT lazy-loaded (`loading="lazy"` on above-the-fold heroes kills LCP). Ensure `fetchpriority="high"` is set.
+- Look for layout shift causes: images without explicit `width` and `height`, dynamically injected content, font swaps.
+- Identify long tasks that could affect Interaction to Next Paint (INP): heavy event handlers, synchronous layout reads, unmemoized Context providers, or blocking hydration.
 - Check for `requestAnimationFrame` or `requestIdleCallback` usage on expensive non-critical work.
+- Verify that performance changes do not break existing features (run test suite and build verification).
 
 ### Add-On: Service Worker and PWA Caching
 

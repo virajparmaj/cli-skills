@@ -1,5 +1,7 @@
 # Chrome Extension Pre-Release Audit Spec
 
+Apply the entrypoint’s scope, evidence, frequency x impact scoring, threshold (5), and deferral policy. These checks and severity examples guide inspection; they do not prove a bug or require a new feature. Mark inapplicable checks N/A and unavailable evidence UNVERIFIED. Below-threshold issues do not block completion; review-only requests remain read-only.
+
 Use this as the strict checklist for Chrome Extension release readiness.
 
 ## Policy References
@@ -205,7 +207,7 @@ Explicitly check:
 - Excessive or irrelevant data collection.
 
 Output:
-- Rejection likelihood score `0-100%`.
+- Evidence-backed risk rating: low, moderate, high, or unverified. A requested numeric rubric score is subjective, not a calibrated probability of rejection.
 - Top reasons that would likely trigger rejection.
 
 ## 12.5) Manifest V3 And Platform Compatibility
@@ -255,17 +257,13 @@ Must include:
 - Safe/compliant areas.
 - Step-by-step action plan.
 
-## Bonus (Mandatory)
+## Optional reviewer simulation
 
-Simulate Chrome Web Store rejection email:
+When requested or useful, draft a clearly labeled simulated Chrome Web Store rejection email for confirmed policy issues:
 - Reviewer-style tone.
 - Policy-aligned issue list.
 - Clear re-submission conditions.
 
-## Rejection Score Guidance
+## Risk assessment
 
-Use this as a baseline rubric:
-- `0-20`: low rejection risk, minor polish gaps only.
-- `21-50`: moderate risk, at least one meaningful policy/privacy inconsistency.
-- `51-80`: high risk, multiple major compliance/security gaps.
-- `81-100`: near-certain rejection, blocker-level issues unresolved.
+Use low/moderate/high risk with explicit evidence, applicable current official policy, and coverage gaps. Store approval cannot be predicted from a static audit. Keep bug confidence separate from occurrence frequency; apply the entrypoint’s frequency x impact scoring and threshold, including deferrals. Do not invent blockers or submit anything to the store without authorization.

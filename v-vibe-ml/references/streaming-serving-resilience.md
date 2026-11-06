@@ -1,38 +1,19 @@
-# Streaming UX, Structured Outputs & RAG Multi-Tenancy
+# Serving, structured output, and retrieval isolation
 
-Production serving guidelines for LLM applications.
+## Interactive responses
 
----
+Assess time to first useful output, complete-response latency, cancellation, and retry behavior for the actual user flow. Streaming is optional when a short response suffices. If streaming exists, verify disconnect handling, partial-output state, bounded retries, and that reconnecting cannot repeat a side effect.
 
-## 1. Response Token Streaming (SSE / WebSockets)
-- Users will abandon an app if they wait 10-15 seconds for an entire completion before seeing a single word.
-- **Server-Sent Events (SSE)**: Stream tokens via standard `text/event-stream`.
-- **Time To First Token (TTFT)**: Target TTFT under 800ms.
-- **Connection Resilience**: Implement client-side reconnection logic; handle aborted streams gracefully without leaving orphaned LLM tasks running on the server.
+## Structured outputs
 
-## 2. Guaranteed Structured Outputs
-- Never rely on prompting the LLM: *"Please output only valid JSON without markdown formatting."* In production, the model will inevitably wrap the JSON in backticks or add introductory commentary.
-- **Methods**:
-  - OpenAI / Gemini Native Structured Outputs (`response_format={"type": "json_schema", ...}`).
-  - Tool/Function Calling (passing a JSON schema as a tool definition).
-  - Pydantic validation with Instructor (`instructor.from_openai(...)`).
-  - Automated retry loop with error feedback if JSON parsing fails on first attempt.
+Use the deployed provider and installed SDK’s supported schema mechanism for machine-consumed output. APIs differ; do not copy one universal `response_format` shape into every provider/client. Validate the response before downstream actions and handle refusal, incomplete output, transport failure, and validation failure explicitly. Bound any repair/retry path. See [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs).
 
-## 3. RAG Multi-Tenancy & Vector DB Isolation
-- **The Cross-Tenant RAG Breach**: If tenant A uploads proprietary company secrets to your vector database and tenant B asks a relevant question, naive vector similarity search will retrieve tenant A's chunks and inject them into tenant B's prompt!
-- **Mandatory Filter**:
-  ```python
-  # SECURE RAG QUERY:
-  results = vector_db.query(
-      vector=query_embedding,
-      top_k=5,
-      filter={"tenant_id": current_user.tenant_id}  # NEVER OMIT THIS FILTER
-  )
-  ```
-- **Embedding Consistency**: Ensure the embedding model used for queries matches the exact model and dimensionality used when populating the index (e.g. `text-embedding-3-small` 1536d).
+## Retrieval boundaries
 
-## 4. Cold-Start & GPU Inference Optimization
-- For self-hosted or open-source models (vLLM, Ollama, Hugging Face TGI):
-  - Use continuous batching and PagedAttention.
-  - Implement speculative decoding for high-throughput endpoints.
-  - Keep warm pool instances ready for high-priority user paths.
+Trace the authenticated identity into every retrieval, document lookup, cache, and citation download. Tenant separation may use distinct indexes/namespaces, RLS, or enforced filters; the presence of a `tenant_id` string does not prove isolation, and a missing metadata-filter pattern does not prove a leak. Test tenant A versus tenant B at the actual boundary when authorized.
+
+Query embeddings must be compatible with the populated index’s model, dimensions, and preprocessing. Verify the configured index/version rather than assuming a fixed embedding model or dimension.
+
+## Hosting efficiency
+
+For self-hosted inference, measure cold starts, queueing, resource utilization, and cancellation before prescribing warm pools, batching, or speculative decoding. These have costs and depend on the installed serving stack and workload.

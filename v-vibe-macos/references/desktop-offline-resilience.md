@@ -30,12 +30,12 @@ Desktop applications operate in hostile, intermittent network environments: slee
   ```
 
 ## 2. Network Reachability & Offline Sync
-- **No Blocking Calls on Main Thread**: Never make synchronous HTTP network requests on the UI thread (`URLSession.shared.data(from:)` inside a button action without `Task`).
+- **UI-thread work**: Trace synchronous I/O and CPU work on the main actor. An awaited asynchronous URLSession request suspends instead of being equivalent to blocking networking; inspect work before/after the await. See the [Swift concurrency guide](https://github.com/swiftlang/swift-book/blob/main/TSPL.docc/LanguageGuide/Concurrency.md).
 - **Offline Queue**: Enqueue mutating actions into a local SQLite table when offline.
 - **Sync Conflict Resolution**: Implement Last-Write-Wins (LWW) or explicit Conflict Resolution UI when syncing offline changes back to the cloud.
 
 ## 3. System Permission Courtesy
-- **Never Trigger Modals on Launch**: Asking for Camera, Microphone, or Accessibility permissions within 0.5s of first app launch guarantees user rejection.
+- **Request permissions in context**: Ask when the corresponding feature needs access, explain its purpose, and preserve a usable denial/retry path. Do not invent rejection guarantees from a fixed startup timing threshold.
 - **Contextual Priming**: Explain *why* the permission is necessary in custom UI immediately before invoking the system prompt:
   ```swift
   // Show in-app explanation sheet first, then:

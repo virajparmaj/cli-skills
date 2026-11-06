@@ -1,42 +1,19 @@
-# AI Security, Spend Defense & Automated Evals
+# Spend, provider failures, model configuration, and evals
 
-Uncontrolled token spend, vendor lock-in, and silent regression are the three biggest failure modes of vibe-coded AI products.
+Apply the entrypoint’s practical scoring and scope policy. Review the current product and provider contract; do not require extra vendors or infrastructure without a demonstrated need.
 
----
+## Spend and retry boundaries
 
-## 1. Denial-of-Wallet & Tenant Spend Caps
-- **The Threat**: A malicious user or runaway scraper floods an LLM endpoint with 100k-token prompts, running up thousands of dollars on your API bill in hours.
-- **Defenses**:
-  - **Per-Tenant Hard Spending Limits**: Track cumulative token cost per user/tenant in Redis. Cut off or throttle requests when monthly threshold is reached.
-  - **Token Rate Limiting**: Limit tokens-per-minute (TPM) and requests-per-minute (RPM) per user.
-  - **Input Truncation**: Enforce maximum input character/token lengths on user inputs before dispatching to the LLM.
-  - **Cloud Budget Alerts**: Configure daily anomaly alerts and hard billing limits on OpenAI, Anthropic, and Google Cloud consoles.
+Trace maximum input/output, per-request cost, concurrency, tool turns, retries, cancellation, and the user/tenant charged. A provider budget alert is not automatically an enforced spending cap. Verify where limits are enforced and what happens on races or provider errors. Use existing storage/limits when adequate; do not prescribe Redis by default.
 
-## 2. Multi-Provider Fallback & Redundancy
-- Major LLM providers suffer frequent outages (HTTP 500, 503, 429 rate limit saturation). A single-provider architecture results in an app-wide outage.
-- **Fallback Architecture**:
-  - Configure automatic failover using an abstraction layer (LiteLLM, Portkey, or custom router).
-  - Primary: `claude-3-5-sonnet` -> Fallback: `gpt-4o` -> Emergency Fallback: `gemini-1.5-pro` or fast local model.
-  - Wrap API calls in retry loops with exponential backoff and circuit breakers.
+Retries must be bounded and distinguish retryable provider failures from refusals, invalid requests, or authentication errors. Verify cancellation stops billable work where supported. Fallback providers are optional and must preserve privacy, tool, and output contracts.
 
-## 3. Pinned Model Snapshots vs Moving Aliases
-- Moving aliases like `"gpt-4o"` or `"claude-3-sonnet"` are silently updated by providers. An unannounced prompt drift can break structured JSON outputs or alter classification accuracy.
-- **Rule**: Pin explicit immutable model snapshot dates in production:
-  - `gpt-4o-2024-08-06`
-  - `claude-3-5-sonnet-20241022`
-  - `gemini-1.5-pro-002`
+## Model configuration
 
-## 4. Automated LLM Eval Harness
-- Never deploy prompt changes or model upgrades based on "vibes" from 3 manual test inputs.
-- **Eval Pipeline**:
-  - Build a curated golden test dataset of 50-100 real-world inputs with expected outputs and edge cases.
-  - Automate evaluations in CI/CD before merging prompt changes (using DeepEval, Ragas, Promptfoo, or custom evaluators).
-  - Score against:
-    - JSON schema validity (100% required)
-    - Hallucination rate
-    - Tone and safety compliance
-    - Cost and latency delta
+Resolve the model actually used from code, environment, routers, and defaults. Preserve the user’s selected provider/model. The scanner classifies literal identifiers as dated, numbered, or undated; naming alone cannot prove immutability, availability, or a defect. Check current official model/version documentation and deprecation notices before recommending changes. Avoid frozen recipes of obsolete model IDs. For OpenAI, use the [official model catalog](https://developers.openai.com/api/docs/models).
 
-## 5. Telemetry & PII Sanitization
-- Store prompt inputs and completions in an observability platform (Langfuse, Helicone, OpenLIT) for debugging.
-- **Privacy Rule**: Strip user credentials, API keys, Social Security numbers, and credit cards before persisting prompts to database or third-party loggers.
+## Validation and telemetry
+
+Choose representative eval cases for actual failure costs and compare quality, schema validity, latency, and cost under the same setup. Keep test inputs and expected behavior stable enough to detect regressions; an arbitrary case quota is not a release criterion.
+
+Record only needed telemetry under the product’s data policy. Redact credentials and sensitive payloads before storage, and verify who can access retained prompts. Do not add a third-party logger or retain full conversations automatically. Consult applicable [official safety guidance](https://developers.openai.com/api/docs/guides/safety-best-practices) for the deployed workflow.

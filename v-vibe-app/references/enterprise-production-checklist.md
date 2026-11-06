@@ -1,5 +1,7 @@
 # Enterprise & Production Readiness Checklist: 80+ Real-World Checks
 
+Apply the entrypoint’s scope, evidence, frequency x impact scoring, threshold (5), and deferral policy. These checks and severity examples guide inspection; they do not prove a bug or require a new feature. Mark inapplicable checks N/A and unavailable evidence UNVERIFIED. Below-threshold issues do not block completion; review-only requests remain read-only.
+
 Before your vibe-coded application touches a paying customer or an enterprise buyer, make sure it satisfies these verified operational and architectural criteria.
 
 ---

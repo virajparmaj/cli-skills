@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 import re
 from pathlib import Path
 
@@ -91,13 +92,12 @@ def existing_paths(repo: Path, candidates: list[str]) -> list[str]:
 
 
 def walk_source_files(repo: Path):
-    for path in repo.rglob("*"):
-        if not path.is_file():
-            continue
-        if any(part in IGNORE_DIRS for part in path.parts):
-            continue
-        if path.suffix.lower() in SOURCE_SUFFIXES:
-            yield path
+    for directory, dirs, files in os.walk(repo):
+        dirs[:] = sorted(d for d in dirs if d not in IGNORE_DIRS)
+        for name in sorted(files):
+            path = Path(directory) / name
+            if path.suffix.lower() in SOURCE_SUFFIXES and path.is_file():
+                yield path
 
 
 def line_count(path: Path) -> int:
@@ -215,8 +215,8 @@ def collect_inventory(repo: Path, threshold: int, top: int) -> dict:
 
     placeholder_tests = sorted(
         rel(repo, path)
-        for path in repo.rglob("example.test.*")
-        if path.is_file() and not any(part in IGNORE_DIRS for part in path.parts)
+        for path in walk_source_files(repo)
+        if path.name.startswith("example.test.")
     )
 
     dep_hits = {}
@@ -257,6 +257,7 @@ def collect_inventory(repo: Path, threshold: int, top: int) -> dict:
     slop = collect_slop_indicators(repo)
 
     return {
+        "evidence_scope": "Static source inventory; candidates require verification",
         "repo": str(repo),
         "notes_files": notes_files,
         "context_files": context,

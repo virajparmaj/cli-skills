@@ -1,46 +1,26 @@
 ---
 name: v-frontend
-description: >-
-  Audit Vite + React + TypeScript + Tailwind frontends for bundle splitting,
-  lazy routes, rerender risks, data-fetching inefficiencies, oversized public
-  assets, font loading, test gaps, design slop (badge spam, italicized buzzwords,
-  instrument serif + negative kerning, excessive dividers, nested bordered boxes),
-  codebase slop (god files, layer-first folders, duplication, illegal states), and
-  Vercel delivery configuration. Use when a user asks for a findings-only frontend
-  performance review, startup/render/network hotspot analysis, route-by-route
-  lazy-loading audit, bundle or chunk review, Supabase query efficiency check,
-  frontend design slop, or Vercel caching/header audit. Typical triggers: "audit
-  this app for performance", "why is initial load slow", "review bundle splitting",
-  "check lazy loading and query waterfalls", "find Vercel delivery gaps",
-  "do a post-build perf audit", "frontend design slop".
+description: "Review Vite, React, TypeScript, and Tailwind frontend performance: bundles, routes, rendering, data fetching, assets, fonts, and Vercel delivery. Use for a focused frontend audit; use v-perf for performance reviews across other web stacks."
 ---
 
 # Vite React Performance Audit
 
 ## Practical review and implementation
 
-- Do not design for rare or future cases nobody asked about.
-- For each bug, report **frequency (1-10)** in current usage, **impact (1-10)**, **frequency x impact = score**, and the reachable trigger with evidence. Keep confidence separate from occurrence frequency; hypothetical future requirements are not bugs. Checklist examples are inspection prompts, not automatic findings or severity assignments.
-- Default fix threshold: **5**, unless the user explicitly changes it. **Below 5:** record one deduplicated backlog issue and leave the code alone; use **Deferred issues** in the review if no backlog exists or remote issue creation is not already authorized. Do not block completion or reopen the same issue without new evidence or an explicit request.
-- **5 or above:** propose the smallest verified fix; implement only within the authorized task. Review-only work stays review-only. Preserve existing report structure and add the scores to each finding. Required checks and explicitly requested fixes still apply.
-- Pass evidence, scores, threshold, and deferrals to the fixer. Stop after the requested scope is covered and required checks pass; re-review affected paths only when changes, failures, or unresolved evidence justify it.
+- Confirm a reachable trigger in current code, inputs, and configuration before calling something a bug. Checklists and size/style heuristics are inspection prompts, not proof; do not add systems for hypothetical future needs.
+- For every bug, report **frequency (1–10) x impact (1–10) = score**, the trigger, and a brief reason for each rating. Frequency measures occurrence in actual usage; confidence in the evidence is separate.
+- Default fix threshold: **5**. Below 5, leave code alone and update one deduplicated existing backlog item; if no backlog exists or remote issue creation is not authorized, use **Deferred issues**. Deferrals do not block completion or start another fix cycle.
+- At 5 or above, use the smallest verified fix only within the authorized task. Review-only requests stay read-only; preserve prior authorization across turns. Required checks and explicitly requested fixes still apply.
+- Pass scope, evidence, scores, threshold, and deferrals to any fixer. Stop when the requested behavior works, eligible in-scope findings are addressed, and required checks pass; repeat only for new changes, failures, or unresolved evidence.
 
-Use this skill for evidence-backed, findings-first audits. Stay in audit mode:
-do not edit files while using this skill.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+Use this skill for evidence-backed, findings-first audits. A review request stays read-only; apply fixes only when the active task authorizes them.
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
+## Evidence and execution
 
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Bound the review.** Cover the requested scope and verify plausible findings. Stop once that scope is covered and required checks pass; expand or repeat only for changed code, failed checks, or unresolved evidence. State coverage gaps; do not chase speculative cases to fill a report.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
+- Resolve bundled `scripts/` and `references/` from this skill’s directory, and pass the target repository separately. Use relevant discovery helpers after checking their arguments and effects; their output identifies candidates, not an exhaustive verdict.
+- Confirm candidates in source and current configuration, and use runtime evidence when the conclusion depends on runtime behavior. Cite exact paths/lines or measurements; distinguish verified findings, inferred risks, and unavailable evidence. A failed helper does not invalidate independently verified facts.
+- Read only references relevant to the requested scope. Mark inapplicable checks **N/A** and unavailable checks **UNVERIFIED**; do not infer a missing capability from an unmatched scanner pattern.
 
 ## Workflow
 
@@ -64,7 +44,7 @@ Run this skill in your highest-effort mode, whatever model you are. Prefer corre
 5. End with the required output sections from the rubric:
    `Verified Findings`, `Unverified Concerns`, `Top 5 Highest-ROI
    Optimizations`, `Likely Startup / Render / Network Hotspots`, and
-   `Reusable Patterns for a Frontend Perf Skill`.
+   `Reusable Patterns for a Frontend Perf Skill`. Include fewer than five optimizations when the evidence supports fewer; never invent findings to fill a quota.
 
 ## Scope Rules
 

@@ -107,10 +107,7 @@ If the baseline build or tests fail, **STOP** and report the baseline failure to
 
 ### Step 2: Atomic File Restructuring & Import Remapping
 When renaming or moving files:
-1. Use `git mv` when inside a git repository to preserve file history:
-   ```bash
-   git mv src/components/foo/FooBar.tsx src/components/FooBar.tsx
-   ```
+1. Move only planned files after recording existing changes. Git detects renames from content; use `git mv` only when staging is authorized, without altering unrelated staged selections.
 2. Immediately update all import references across the codebase:
    - Relative imports (`./`, `../`)
    - Path aliases (`@/components/...`)
@@ -144,10 +141,6 @@ After applying restructuring and code changes:
 ## 3. Rollback Protocol
 
 If a refactor causes unresolvable build or test regressions:
-1. Revert using git:
-   ```bash
-   git checkout -- .
-   git clean -fd
-   ```
+1. Restore only the edits introduced by this task, using the recorded pre-task contents and action table. Reverse task-owned moves individually and remove only files created by this task. Preserve pre-existing staged, unstaged, and untracked work. Do not run repository-wide checkout, reset, or clean commands.
 2. Isolate the specific change that broke the contract.
 3. Propose a smaller, targeted restructuring step instead of bulk moves.

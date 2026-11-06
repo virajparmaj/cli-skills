@@ -160,22 +160,18 @@ def check_model_versioning_and_fallbacks(repo_path: Path):
         "has_eval_harness": False,
     }
 
-    # Unpinned moving models
-    unpinned_patterns = [
-        re.compile(r'["\'](gpt-4o|gpt-4-turbo|gpt-4|gpt-3\.5-turbo)["\']'),
-        re.compile(r'["\'](claude-3-5-sonnet|claude-3-opus|claude-3-haiku)["\']'),
-        re.compile(r'["\'](gemini-1\.5-pro|gemini-1\.5-flash|gemini-pro)["\']'),
-    ]
-
-    # Pinned model snapshots
-    pinned_pattern = re.compile(r'["\'](?:gpt-4o-\d{4}-\d{2}-\d{2}|claude-3-5-sonnet-\d{8}|gemini-1\.5-pro-\d{3}|gemini-2\.0-flash-\d{3})["\']')
+    # Naming is a discovery signal, not proof of provider immutability or availability.
+    configured_model = re.compile(r"\bmodel(?:_name|_id)?[\"']?\s*[:=]\s*([\"'])([^\"'\n]+)\1", re.IGNORECASE)
+    dated_identifier = re.compile(r"-\d{4}-?\d{2}-?\d{2}$")
+    numbered_identifier = re.compile(r"-\d{3}$")
+    results["model_references"] = []
 
     for p in walk_files(repo_path):
         rel = str(p.relative_to(repo_path))
         if any(term in p.name.lower() for term in ["eval", "benchmark", "golden_dataset"]):
             results["has_eval_harness"] = True
 
-        if p.suffix.lower() not in [".py", ".ts", ".js", ".json", ".yaml"]:
+        if p.suffix.lower() not in [".py", ".ts", ".js", ".json", ".yaml", ".yml"]:
             continue
 
         try:
@@ -187,15 +183,12 @@ def check_model_versioning_and_fallbacks(repo_path: Path):
             results["has_model_fallback"] = True
 
         for idx, line in enumerate(content.splitlines(), 1):
-            m_pin = pinned_pattern.search(line)
-            if m_pin:
-                results["pinned_models"].append({"file": rel, "line": idx, "model": m_pin.group(0)})
-
-            for unpin in unpinned_patterns:
-                m_unpin = unpin.search(line)
-                if m_unpin and not pinned_pattern.search(line):
-                    if len(results["unpinned_models"]) < 6:
-                        results["unpinned_models"].append({"file": rel, "line": idx, "model": m_unpin.group(0)})
+            for match in configured_model.finditer(line):
+                model = match.group(2)
+                version_kind = "dated identifier" if dated_identifier.search(model) else "numbered identifier" if numbered_identifier.search(model) else "alias or undated identifier"
+                item = {"file": rel, "line": idx, "model": model, "version_kind": version_kind}
+                results["model_references"].append(item)
+                results["pinned_models" if version_kind != "alias or undated identifier" else "unpinned_models"].append(item)
 
     return results
 
@@ -243,8 +236,8 @@ def main():
     args = parse_args()
     repo_path = Path(args.repo).resolve()
 
-    if not repo_path.exists():
-        print(f"Error: path does not exist: {repo_path}", file=sys.stderr)
+    if not repo_path.is_dir():
+        print(f"Error: not a repository directory: {repo_path}", file=sys.stderr)
         sys.exit(1)
 
     prompt_sec = check_prompt_security_and_injection(repo_path)
@@ -253,6 +246,7 @@ def main():
     rag_sec = check_rag_and_vector_db_isolation(repo_path)
 
     full_report = {
+        "evidence_scope": "Static source candidates; runtime enforcement and deployment remain unverified",
         "repo": str(repo_path),
         "prompt_security": prompt_sec,
         "agent_guards": agent_guards,
@@ -264,6 +258,7 @@ def main():
         print(json.dumps(full_report, indent=2))
         return
 
+    print("Static source candidates only; unmatched patterns do not prove safety or absence.")
     print("=" * 70)
     print("V-VIBE-ML: AI, LLM & AGENTIC APPLICATION PRODUCTION AUDIT")
     print("=" * 70)
@@ -281,7 +276,7 @@ def main():
         for r in prompt_sec["raw_string_prompts"][:3]:
             print(f"    * {r['file']}:{r['line']} -> {r['text']}")
     else:
-        print("  - Prompt Formatting: Clean structured messages")
+        print("  - No configured raw-prompt pattern found; message separation UNVERIFIED")
     print(f"  - Delimiter / XML tag hygiene: {'DETECTED' if prompt_sec['delimiter_hygiene_found'] else 'MISSING (Vulnerable to instruction confusion)'}")
 
     print("\n2. Agent Safeguards & Spend Defense:")
@@ -290,15 +285,15 @@ def main():
         for loop in agent_guards["runaway_agent_loops"][:3]:
             print(f"    * {loop['file']}:{loop['line']} -> {loop['text']}")
     else:
-        print("  - Agent Loop Circuit Breakers: PROTECTED")
+        print("  - No unbounded-loop pattern found; guard effectiveness UNVERIFIED")
     print(f"  - Hard Token / Spend Cap Configured: {'YES' if agent_guards['has_spend_cap'] else 'NO (Denial-of-wallet risk)'}")
     print(f"  - Token Usage Telemetry: {'TRACKED' if agent_guards['has_token_tracking'] else 'MISSING'}")
     print(f"  - Human-in-the-Loop (HITL) for Destructive Actions: {'FOUND' if agent_guards['has_hitl_approval'] else 'NOT FOUND'}")
 
     print("\n3. Model Reliability & Versioning:")
-    print(f"  - Pinned Model Snapshots: {len(versioning['pinned_models'])} instances")
+    print(f"  - Dated/Numbered Model Identifiers (provider stability UNVERIFIED): {len(versioning['pinned_models'])} instances")
     if versioning["unpinned_models"]:
-        print(f"  - [WARNING] Unpinned moving model aliases in use ({len(versioning['unpinned_models'])} instances):")
+        print(f"  - [WARNING] Alias/undated model identifiers to verify ({len(versioning['unpinned_models'])} instances):")
         for m in versioning["unpinned_models"][:3]:
             print(f"    * {m['file']}:{m['line']} -> {m['model']}")
     print(f"  - Multi-Provider Fallback Architecture: {'CONFIGURED' if versioning['has_model_fallback'] else 'SINGLE PROVIDER DEPENDENCY (Outage risk)'}")
@@ -307,9 +302,9 @@ def main():
     print("\n4. RAG Hygiene & Serving Performance:")
     if rag_sec["vector_db_found"]:
         print(f"  - Vector DB Detected: {', '.join(rag_sec['vector_frameworks'])}")
-        print(f"  - Tenant ID Metadata Filtering: {'ENFORCED' if rag_sec['has_tenant_metadata_filtering'] else 'CRITICAL: Missing tenant filter in vector search (Cross-tenant RAG leak risk)'}")
+        print(f"  - Tenant ID Metadata Filtering: {'FILTER PATTERN FOUND; verify every query' if rag_sec['has_tenant_metadata_filtering'] else 'NO FILTER PATTERN FOUND; tenant architecture UNVERIFIED'}")
     print(f"  - Response Token Streaming (SSE/WebSocket): {'IMPLEMENTED' if rag_sec['streaming_detected'] else 'NO (High TTFT / timeout risk)'}")
-    print(f"  - Structured Output Enforcement: {'ENFORCED (Pydantic/JSON Schema)' if rag_sec['structured_output_enforced'] else 'UNSTRUCTURED (Prone to JSON parse crashes)'}")
+    print(f"  - Structured Output Enforcement: {'SCHEMA PATTERN FOUND; runtime validation UNVERIFIED' if rag_sec['structured_output_enforced'] else 'NO SCHEMA PATTERN FOUND'}")
     print("=" * 70)
 
 

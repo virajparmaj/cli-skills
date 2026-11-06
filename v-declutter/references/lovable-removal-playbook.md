@@ -157,7 +157,7 @@ project name, purpose, stack, and scripts.
   lockfile's package manager.
 
 For a fuller product-page rewrite with real screenshot capture, hand off to
-`v-readme-app` / `v-readme-web`. This skill only de-Lovables the README.
+`v-readme`. This skill only de-Lovables the README.
 
 ---
 

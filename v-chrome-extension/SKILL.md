@@ -1,118 +1,43 @@
 ---
 name: v-chrome-extension
-description: "Run a strict, production-grade pre-release Chrome Extension audit before Chrome Web Store submission. Use when asked to check policy compliance, permissions/privacy risk, security vulnerabilities, malicious behavior signals, functional and edge-case reliability, performance inefficiencies, listing metadata accuracy, and likely rejection causes. Key capabilities: least-privilege permission review, privacy-policy gap analysis, vulnerability triage with severity, test-matrix design, rejection-likelihood scoring, and reviewer-style rejection simulation. Trigger phrases: audit Chrome extension, CWS readiness check, pre-release extension review, why will this be rejected, extension security and permissions audit."
+description: "Review Chrome extensions for Chrome Web Store submission, permission and privacy mismatches, security, reliability, and listing accuracy. Use for an extension audit or rejection-risk review; verify applicable policy against current official sources."
 ---
 
 # Chrome Extension Pre-Release Audit
 
 ## Practical review and implementation
 
-- Do not design for rare or future cases nobody asked about.
-- For each bug, report **frequency (1-10)** in current usage, **impact (1-10)**, **frequency x impact = score**, and the reachable trigger with evidence. Keep confidence separate from occurrence frequency; hypothetical future requirements are not bugs. Checklist examples are inspection prompts, not automatic findings or severity assignments.
-- Default fix threshold: **5**, unless the user explicitly changes it. **Below 5:** record one deduplicated backlog issue and leave the code alone; use **Deferred issues** in the review if no backlog exists or remote issue creation is not already authorized. Do not block completion or reopen the same issue without new evidence or an explicit request.
-- **5 or above:** propose the smallest verified fix; implement only within the authorized task. Review-only work stays review-only. Preserve existing report structure and add the scores to each finding. Required checks and explicitly requested fixes still apply.
-- Pass evidence, scores, threshold, and deferrals to the fixer. Stop after the requested scope is covered and required checks pass; re-review affected paths only when changes, failures, or unresolved evidence justify it.
+- Confirm a reachable trigger in current code, inputs, and configuration before calling something a bug. Checklists and size/style heuristics are inspection prompts, not proof; do not add systems for hypothetical future needs.
+- For every bug, report **frequency (1–10) x impact (1–10) = score**, the trigger, and a brief reason for each rating. Frequency measures occurrence in actual usage; confidence in the evidence is separate.
+- Default fix threshold: **5**. Below 5, leave code alone and update one deduplicated existing backlog item; if no backlog exists or remote issue creation is not authorized, use **Deferred issues**. Deferrals do not block completion or start another fix cycle.
+- At 5 or above, use the smallest verified fix only within the authorized task. Review-only requests stay read-only; preserve prior authorization across turns. Required checks and explicitly requested fixes still apply.
+- Pass scope, evidence, scores, threshold, and deferrals to any fixer. Stop when the requested behavior works, eligible in-scope findings are addressed, and required checks pass; repeat only for new changes, failures, or unresolved evidence.
+
 
 Use this skill to run a complete release-gate audit for Chrome extensions with strict Chrome Web Store standards.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and execution
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
+- Resolve bundled `scripts/` and `references/` from this skill’s directory, and pass the target repository separately. Use relevant discovery helpers after checking their arguments and effects; their output identifies candidates, not an exhaustive verdict.
+- Confirm candidates in source and current configuration, and use runtime evidence when the conclusion depends on runtime behavior. Cite exact paths/lines or measurements; distinguish verified findings, inferred risks, and unavailable evidence. A failed helper does not invalidate independently verified facts.
+- Read only references relevant to the requested scope. Mark inapplicable checks **N/A** and unavailable checks **UNVERIFIED**; do not infer a missing capability from an unmatched scanner pattern.
 
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Bound the review.** Cover the requested scope and verify plausible findings. Stop once that scope is covered and required checks pass; expand or repeat only for changed code, failed checks, or unresolved evidence. State coverage gaps; do not chase speculative cases to fill a report.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
 
-## CRITICAL
+## Workflow
 
-- Assume Google-level reviewer strictness.
-- Treat policy, privacy, and security findings as release blockers by default.
-- Never mark an item as compliant without evidence from code, config, runtime behavior, or docs.
-- Classify each claim as `verified`, `likely`, or `needs runtime confirmation`.
-- Stay in audit mode unless the user explicitly asks for implementation fixes.
+1. Identify extension roots from `manifest.json`; inspect the manifest to distinguish an extension from unrelated web-app manifests. For a focused request, audit the selected surface; for a full pre-release audit, cover the applicable sections of the reference.
+2. Run `bash "<skill-path>/scripts/discover-extension-surface.sh" "<repo>"`. Read the manifest, service worker/background code, content scripts, UI, external APIs, and listing/privacy artifacts. The helper caps output; inspect additional matches when they affect coverage.
+3. Read [references/chrome-extension-pre-release-audit-spec.md](references/chrome-extension-pre-release-audit-spec.md) and verify policy conclusions against its current official Chrome links. Distinguish observed behavior from policy interpretation and untested concerns.
+4. For a full audit, build permission and data-flow tables. Map each permission to actual use and each collected data type to purpose, storage, retention, sharing, and user controls.
+5. Check the extension’s actual runtime flows where available: service-worker suspension, permission denial, offline behavior, API failure, and upgrades. Mark unrun tests as unverified rather than failed.
+6. Report evidence-backed submission risk as low, moderate, or high. If the user asks for a numeric score, label it a subjective rubric score with its basis; do not present an uncalibrated percentage as a probability of store rejection.
 
-## Instructions
+## Output
 
-1. Confirm audit target.
-   - Find extension roots by locating `manifest.json`.
-   - If multiple manifests exist, audit each or confirm scope.
-2. Gather evidence first.
-   - Run [`scripts/discover-extension-surface.sh`](scripts/discover-extension-surface.sh) with the target repo path.
-   - Read manifest, permission declarations, background/service worker logic, content scripts, popup/options pages, and external API usage.
-3. Execute the full checklist in
-   [references/chrome-extension-pre-release-audit-spec.md](references/chrome-extension-pre-release-audit-spec.md).
-   - Cover all sections `1` through `14`.
-   - Use the policy links embedded in the reference for compliance decisions.
-4. Build mandatory audit tables.
-   - Permission table: permission, where used, business necessity, least-privilege alternative, privacy disclosure status.
-   - Data flow table: data type, source, purpose, storage, retention, sharing, user control.
-5. Assess testing coverage.
-   - Provide core flow checks, edge/failure scenarios, and missing automated tests.
-6. Score rejection risk.
-   - Compute rejection likelihood `0-100%` and list top rejection reasons with evidence.
-7. Provide final verdict and rejection simulation.
-   - Include reviewer-style rejection email with policy-aligned language and concrete remediation items.
+For a full audit, use the reference’s sections: scope; policy; permissions/privacy; security; suspicious behavior; functional/edge/error tests; performance; maintainability; UX trust; listing; rejection risks; improvements; verdict and action plan. A focused request may omit unrelated sections.
 
-## Output Contract
+Every bug includes its reachable trigger, frequency and impact with reasons, score, confidence, exact evidence, smallest fix, and verification. Separate unverified concerns and **Deferred issues**. Missing optional features do not determine submission readiness.
 
-Return sections in this exact order:
+Use `ready`, `not ready`, or `unverified` with the concrete basis. A simulated rejection email is an optional draft when requested or useful for explaining confirmed policy issues; label it clearly and do not manufacture rejection reasons when none were verified.
 
-1. Scope and assumptions
-2. Policy and compliance audit (blockers first)
-3. Permissions and privacy audit
-4. Security and data handling vulnerabilities
-5. Malicious or suspicious behavior assessment
-6. Functional testing coverage and failures
-7. Edge and failure testing coverage and gaps
-8. Error handling and user safety findings
-9. Performance and inefficiency findings
-10. Code quality and maintainability findings
-11. UX trust and transparency findings
-12. Listing and store metadata risks
-13. Common rejection trigger check + rejection likelihood score
-14. Improvements beyond compliance
-15. Final verdict:
-   - approval readiness (`ready` or `not ready`)
-   - critical issues (must fix)
-   - medium issues (should fix)
-   - safe areas
-   - step-by-step action plan
-16. Simulated Chrome Web Store rejection email (mandatory)
-
-## Examples
-
-Example 1  
-User says: "Audit this extension before Chrome Web Store submission."
-Actions:
-1. Discover extension surfaces from manifest and code.
-2. Run all `1-14` checklist sections.
-3. Return blocker-first findings, rejection score, and fix plan.
-Result: Release-gate audit with clear submission decision.
-
-Example 2  
-User says: "Why is this extension likely to be rejected?"
-Actions:
-1. Focus on permissions/privacy mismatches, undocumented behavior, and listing claims.
-2. Map issues to policy-aligned rejection triggers.
-3. Produce simulated reviewer email and prioritized remediation.
-Result: Concrete rejection-risk explanation and submission-hardening plan.
-
-## Troubleshooting
-
-Skill does not trigger
-- Use explicit requests like "run a Chrome Web Store pre-release audit."
-
-No manifest found
-- Confirm the repo contains an extension root with `manifest.json`.
-
-Too many uncertain findings
-- Add runtime confirmation steps (network throttling, permission denial, offline mode, API fault injection).
-
-Privacy conclusions are weak
-- Build explicit data-flow mapping and require policy text that matches real behavior.
+If no extension manifest exists, report the searched scope and stop. Do not submit to the store, change listing/privacy declarations, or contact reviewers without authorization.

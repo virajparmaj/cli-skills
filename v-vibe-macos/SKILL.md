@@ -1,33 +1,26 @@
 ---
 name: v-vibe-macos
-description: "Review-only post-vibe audit for macOS desktop applications (Swift, SwiftUI, AppKit, Tauri, Electron, Flutter for Mac). Audits App Sandbox compliance, least-privilege entitlements, Security-Scoped Bookmarks, mandatory Privacy Manifest (PrivacyInfo.xcprivacy), Hardened Runtime, Gatekeeper notarization readiness, native desktop stability (atomic file writes, SQLite WAL mode, memory leaks/retain cycles, battery/timer polling), menu bar Dark/Light mode integration, and Sparkle auto-update security. Trigger on audit macos, audit desktop, audit mac app, v-vibe-macos, v-vibe-mac, mac app store audit."
+description: "Review macOS applications built with Swift, AppKit, SwiftUI, Tauri, or Electron for persistence, permissions, sandboxing, signing, updates, and release readiness. Use for a desktop audit; distinguish Mac App Store requirements from direct distribution."
 ---
 
 # Post-Vibe macOS Desktop Software Audit
 
 ## Practical review and implementation
 
-- Do not design for rare or future cases nobody asked about.
-- For each bug, report **frequency (1-10)** in current usage, **impact (1-10)**, **frequency x impact = score**, and the reachable trigger with evidence. Keep confidence separate from occurrence frequency; hypothetical future requirements are not bugs. Checklist examples are inspection prompts, not automatic findings or severity assignments.
-- Default fix threshold: **5**, unless the user explicitly changes it. **Below 5:** record one deduplicated backlog issue and leave the code alone; use **Deferred issues** in the review if no backlog exists or remote issue creation is not already authorized. Do not block completion or reopen the same issue without new evidence or an explicit request.
-- **5 or above:** propose the smallest verified fix; implement only within the authorized task. Review-only work stays review-only. Preserve existing report structure and add the scores to each finding. Required checks and explicitly requested fixes still apply.
-- Pass evidence, scores, threshold, and deferrals to the fixer. Stop after the requested scope is covered and required checks pass; re-review affected paths only when changes, failures, or unresolved evidence justify it.
+- Confirm a reachable trigger in current code, inputs, and configuration before calling something a bug. Checklists and size/style heuristics are inspection prompts, not proof; do not add systems for hypothetical future needs.
+- For every bug, report **frequency (1–10) x impact (1–10) = score**, the trigger, and a brief reason for each rating. Frequency measures occurrence in actual usage; confidence in the evidence is separate.
+- Default fix threshold: **5**. Below 5, leave code alone and update one deduplicated existing backlog item; if no backlog exists or remote issue creation is not authorized, use **Deferred issues**. Deferrals do not block completion or start another fix cycle.
+- At 5 or above, use the smallest verified fix only within the authorized task. Review-only requests stay read-only; preserve prior authorization across turns. Required checks and explicitly requested fixes still apply.
+- Pass scope, evidence, scores, threshold, and deferrals to any fixer. Stop when the requested behavior works, eligible in-scope findings are addressed, and required checks pass; repeat only for new changes, failures, or unresolved evidence.
+
 
 Use this skill when auditing a native macOS desktop application or web-wrapper desktop app (Swift, AppKit, SwiftUI, Tauri, Electron). Stay in review mode unless the user explicitly requests implementation.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and execution
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
-
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found in repository`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Bound the review.** Cover the requested scope and verify plausible findings. Stop once that scope is covered and required checks pass; expand or repeat only for changed code, failed checks, or unresolved evidence. State coverage gaps; do not chase speculative cases to fill a report.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix.
+- Resolve bundled `scripts/` and `references/` from this skill’s directory, and pass the target repository separately. Use relevant discovery helpers after checking their arguments and effects; their output identifies candidates, not an exhaustive verdict.
+- Confirm candidates in source and current configuration, and use runtime evidence when the conclusion depends on runtime behavior. Cite exact paths/lines or measurements; distinguish verified findings, inferred risks, and unavailable evidence. A failed helper does not invalidate independently verified facts.
+- Read only references relevant to the requested scope. Mark inapplicable checks **N/A** and unavailable checks **UNVERIFIED**; do not infer a missing capability from an unmatched scanner pattern.
 
 ## Quick Start
 
@@ -35,10 +28,15 @@ Run this skill in your highest-effort mode, whatever model you are. Prefer corre
    ```bash
    python3 "<skill-path>/scripts/audit_macos_vibe.py" --repo "<repo>"
    ```
-2. Read the domain references before evaluating:
+2. Read only domain references relevant to this review:
+   - [references/mac-app-store-release-readiness-checklist.md](references/mac-app-store-release-readiness-checklist.md) for full Mac App Store pre-release readiness & rejection gates
    - [references/macos-desktop-architecture.md](references/macos-desktop-architecture.md) for local persistence, atomic writes, and memory hygiene
    - [references/app-store-notarization-checklist.md](references/app-store-notarization-checklist.md) for App Sandbox, entitlements, and privacy manifests
    - [references/desktop-offline-resilience.md](references/desktop-offline-resilience.md) for offline sync, permissions, and bookmarks
+
+## Applicability
+
+Identify the distribution channel and framework version first. App Store and direct-distribution checks differ; inspect release build settings and bundled SDKs. Confirm ownership and lifetime before recommending weak captures, and actual contention/durability needs before prescribing WAL or atomic replacement for every write. Verify current Apple requirements for the APIs and SDKs actually shipped.
 
 ## Workflow
 
@@ -53,20 +51,20 @@ Run this skill in your highest-effort mode, whatever model you are. Prefer corre
 - **Security-Scoped Bookmarks**: Ensure apps that remember user-opened files implement bookmarks so access persists across restarts.
 
 ### 3. Audit Privacy Manifest & Store Review Readiness
-- **Privacy Manifest**: Verify existence and completeness of `PrivacyInfo.xcprivacy` with Required Reason APIs documented.
+- **Privacy Manifest**: Identify required-reason API usage, tracking, and bundled SDK requirements, then verify applicable `PrivacyInfo.xcprivacy` declarations against current Apple guidance.
 - **Deprecated APIs**: Check for obsolete APIs (`WebView`, `NSArchiver`, deprecated Carbon symbols).
 - **Auto-Update (Sparkle)**: For direct distribution, verify Sparkle 2 is configured with EdDSA public keys (`SUPublicEDKey`).
 
 ### 4. Audit Native Desktop Architecture & Stability
 - **Atomic File Writes**: Verify all file saves use atomic options (`[.atomic]`) to prevent zero-byte corruptions on power loss or crash.
-- **SQLite / Database WAL Mode**: Verify SQLite/CoreData uses WAL journal mode and busy timeouts to prevent UI thread lockups.
+- **SQLite / Database Concurrency**: Trace database access and UI-thread blocking, journal mode, transactions, and timeouts. Recommend WAL only when appropriate to the actual storage model.
 - **Timer & Battery Conservation**: Flag unthrottled polling timers (< 2.0s interval) that drain battery and trigger App Nap throttling.
 - **Retain Cycles**: Check closure captures for missing `[weak self]` in long-lived services or network publishers.
 
 ### 5. Audit Web-Wrapper Container Security (Electron / Tauri)
-- **Node Integration**: Flag any `nodeIntegration: true` as critical vulnerability.
+- **Node Integration**: Trace whether untrusted content can reach Node capabilities; assess `nodeIntegration`, navigation restrictions, preload/IPC validation, sandboxing, and context isolation together.
 - **Context Isolation**: Verify `contextIsolation: true` in Electron webPreferences.
-- **Tauri Permissions**: Verify allowlist in `tauri.conf.json` does not expose broad unneeded shell/fs capabilities.
+- **Tauri Permissions**: Determine the Tauri version; inspect its actual allowlist or capabilities and scope shell/fs access to required operations.
 
 ## Output Contract
 
@@ -96,8 +94,9 @@ Produce the audit report in this exact structure:
 ## 3. Findings by Severity (P0, P1, P2, P3)
 
 ### [P0/P1/P2/P3-CODE] Title
-- **Severity**: P0 (Security flaw / instant Apple rejection) | P1 (Crash on launch / data corruption) | P2 (Battery/memory leak) | P3 (Polish)
+- **Severity**: P0 (Verified severe security or distribution blocker) | P1 (Crash on launch / data corruption) | P2 (Battery/memory leak) | P3 (Polish)
 - **Status**: Verified | Unverified Concern
+- **Trigger and score**: frequency (1–10, reason) x impact (1–10, reason) = score; confidence stated separately
 - **File**: `path/to/file:line`
 - **What**: Exact code or entitlements evidence.
 - **Why it matters**: Rejection clause, user data loss, or system crash scenario.

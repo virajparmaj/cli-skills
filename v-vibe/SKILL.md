@@ -1,33 +1,26 @@
 ---
 name: v-vibe
-description: "Review-only post-vibe-code architecture and maintainability audit for Vite/React/TypeScript apps with Tailwind/shadcn and optional Supabase, FastAPI, or Vercel backends. First read repo context files (CLAUDE.md, notes/*, README.md, PRODUCTION_READY.md) and do not repeat known issues unless there is a delta. Map stack/auth/data/tooling, inspect architecture debt, codebase slop indicators (implicit coupling, layer-first folders, duplication, representable illegal states, god files, shotgun surgery, layering violations, pass-through wrappers, errors/validation not at the boundary), design slop indicators (tags/badge spam, italicized words, instrument serif + negative kerning, over-detailed UI, dividers, multiple color opacities, containers with borders, superfluous diagrams, code breadcrumbs, section numbering), dead code/deps, demo-vs-prod splits, state/type drift, config/doc drift, bundle health, and tests. Output verified findings with file refs, severity, smallest fix, missing tests, cleanup backlog, reusable rules, and what's good. Trigger on audit repo, post-vibe review, maintainability audit, architecture debt, codebase slop, design slop."
+description: "Review architecture and maintainability in Vite/React/TypeScript projects with optional Supabase or FastAPI. Use for a post-vibe code audit, coupling, duplication, state/type drift, dead code, or configuration drift; route specialized product reviews to v-vibe-*."
 ---
 
 # Post-Vibe-Code Architecture Audit
 
 ## Practical review and implementation
 
-- Do not design for rare or future cases nobody asked about.
-- For each bug, report **frequency (1-10)** in current usage, **impact (1-10)**, **frequency x impact = score**, and the reachable trigger with evidence. Keep confidence separate from occurrence frequency; hypothetical future requirements are not bugs. Checklist examples are inspection prompts, not automatic findings or severity assignments.
-- Default fix threshold: **5**, unless the user explicitly changes it. **Below 5:** record one deduplicated backlog issue and leave the code alone; use **Deferred issues** in the review if no backlog exists or remote issue creation is not already authorized. Do not block completion or reopen the same issue without new evidence or an explicit request.
-- **5 or above:** propose the smallest verified fix; implement only within the authorized task. Review-only work stays review-only. Preserve existing report structure and add the scores to each finding. Required checks and explicitly requested fixes still apply.
-- Pass evidence, scores, threshold, and deferrals to the fixer. Stop after the requested scope is covered and required checks pass; re-review affected paths only when changes, failures, or unresolved evidence justify it.
+- Confirm a reachable trigger in current code, inputs, and configuration before calling something a bug. Checklists and size/style heuristics are inspection prompts, not proof; do not add systems for hypothetical future needs.
+- For every bug, report **frequency (1–10) x impact (1–10) = score**, the trigger, and a brief reason for each rating. Frequency measures occurrence in actual usage; confidence in the evidence is separate.
+- Default fix threshold: **5**. Below 5, leave code alone and update one deduplicated existing backlog item; if no backlog exists or remote issue creation is not authorized, use **Deferred issues**. Deferrals do not block completion or start another fix cycle.
+- At 5 or above, use the smallest verified fix only within the authorized task. Review-only requests stay read-only; preserve prior authorization across turns. Required checks and explicitly requested fixes still apply.
+- Pass scope, evidence, scores, threshold, and deferrals to any fixer. Stop when the requested behavior works, eligible in-scope findings are addressed, and required checks pass; repeat only for new changes, failures, or unresolved evidence.
+
 
 Use this skill when the task is to inspect a repo, not to fix it. Stay in review mode unless the user explicitly asks for implementation.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and execution
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
-
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Bound the review.** Cover the requested scope and verify plausible findings. Stop once that scope is covered and required checks pass; expand or repeat only for changed code, failed checks, or unresolved evidence. State coverage gaps; do not chase speculative cases to fill a report.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
+- Resolve bundled `scripts/` and `references/` from this skill’s directory, and pass the target repository separately. Use relevant discovery helpers after checking their arguments and effects; their output identifies candidates, not an exhaustive verdict.
+- Confirm candidates in source and current configuration, and use runtime evidence when the conclusion depends on runtime behavior. Cite exact paths/lines or measurements; distinguish verified findings, inferred risks, and unavailable evidence. A failed helper does not invalidate independently verified facts.
+- Read only references relevant to the requested scope. Mark inapplicable checks **N/A** and unavailable checks **UNVERIFIED**; do not infer a missing capability from an unmatched scanner pattern.
 
 ## Quick Start
 
@@ -53,9 +46,9 @@ Run this skill in your highest-effort mode, whatever model you are. Prefer corre
      7. `notes/05_database_schema.md`
      8. `README.md`
      9. `PRODUCTION_READY.md`
-   - Treat these files as the source of truth for deliberate tradeoffs, resolved issues, and known gaps.
+   - Use these files to identify deliberate tradeoffs, resolved issues, and known gaps; verify current behavior against code and configuration.
    - Do not rereport tracked issues unless the issue worsened or produced a new symptom. Report the delta only.
-   - If the repo lacks `notes/` or other context files, say so; that is itself a maintainability finding.
+   - If context files are absent, inspect source directly and state any actual coverage gap. Missing a preferred notes directory alone is not a bug.
 
 2. Map the repo.
    - Read `package.json`, `tsconfig.json`, `tsconfig.app.json`, `vite.config.*`, `tailwind.config.*`, `vercel.json`, `.env.example` or `.env`, ESLint config, `supabase/`, `api/` or `backend/`, and `.github/workflows/` when present.
@@ -91,7 +84,7 @@ Run this skill in your highest-effort mode, whatever model you are. Prefer corre
      - **Section numbering**: Robotic numbered sections ("01 / Features", "02 / Architecture", "03 / Pricing", "Step 01 - Onboarding") typical of generic AI template generation.
 
    - Oversized files and god modules:
-     - Flag files above roughly 300 LOC.
+     - Inspect files above roughly 300 LOC as candidates; report only demonstrated responsibility or change-coupling problems.
      - Include the actual line count and the responsibilities that are tangled.
    - Dead code and unused dependencies:
      - Check installed-but-unused packages, unused imports, orphan files, unused service functions, Lovable traces, and placeholder tests.
@@ -128,7 +121,7 @@ Run this skill in your highest-effort mode, whatever model you are. Prefer corre
      - missing CSP or HSTS when the app handles user data
 
 4. Assess build and bundle health.
-   - Flag bundles or chunks above about 500 KB.
+   - Inspect bundles or chunks above about 500 KB as candidates; report measured transfer/execution cost or a violated project budget.
    - Check whether heavy libraries are lazy-loaded.
    - Inspect `manualChunks`, `size-limit`, and whether `dist/` is committed.
 

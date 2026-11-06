@@ -77,7 +77,7 @@ rg -n --hidden \
   --glob '!**/.git/**' \
   --glob '!**/dist/**' \
   --glob '!**/build/**' \
-  '(eval\s*\(|new\s+Function\s*\(|setTimeout\s*\(\s*["'"'"'`]|setInterval\s*\(\s*["'"'"'`]|innerHTML\s*=|document\.write\s*\(|chrome\.scripting\.executeScript|chrome\.tabs\.executeScript|atob\s*\(|btoa\s*\(|fetch\s*\(\s*["'"'"'`]http://|XMLHttpRequest\s*\()' \
+  '(eval\s*\(|new\s+Function\s*\(|setTimeout\s*\(\s*["'"'"'`]|setInterval\s*\(\s*["'"'"'`]|innerHTML\s*=|document\.write\s*\(|chrome\.scripting\.executeScript|chrome\.tabs\.executeScript|atob\s*\(|btoa\s*\(|fetch\s*\(\s*["'"'"'`]http://|XMLHttpRequest\s*\()' . \
   | head -n 500 || true
 
 echo
@@ -87,17 +87,17 @@ rg -n --hidden \
   --glob '!**/.git/**' \
   --glob '!**/dist/**' \
   --glob '!**/build/**' \
-  'https?://[A-Za-z0-9._~:/?#\[\]@!$&'"'"'()*+,;=%-]+' \
+  'https?://[A-Za-z0-9._~:/?#\[\]@!$&'"'"'()*+,;=%-]+' . \
   | head -n 500 || true
 
 echo
 echo "== Potential Secrets / Sensitive Tokens =="
-rg -n --hidden \
+rg -l --hidden \
   --glob '!**/node_modules/**' \
   --glob '!**/.git/**' \
   --glob '!**/dist/**' \
   --glob '!**/build/**' \
-  '(AIza[0-9A-Za-z\-_]{20,}|sk_live_[0-9A-Za-z]{10,}|xox[baprs]-[0-9A-Za-z-]+|-----BEGIN (RSA|EC|OPENSSH|PRIVATE) KEY-----|api[_-]?key|access[_-]?token|client[_-]?secret)' \
+  '(AIza[0-9A-Za-z\-_]{20,}|sk_live_[0-9A-Za-z]{10,}|xox[baprs]-[0-9A-Za-z-]+|-----BEGIN (RSA|EC|OPENSSH|PRIVATE) KEY-----|api[_-]?key|access[_-]?token|client[_-]?secret)' . \
   | head -n 300 || true
 
 echo
@@ -118,5 +118,5 @@ rg -n --hidden \
   --glob '!**/.git/**' \
   --glob '!**/dist/**' \
   --glob '!**/build/**' \
-  '(setInterval\s*\(|MutationObserver|addEventListener\s*\(|chrome\.alarms\.create|chrome\.tabs\.onUpdated|chrome\.runtime\.onMessage|Promise\.all|while\s*\(|for\s*\()' \
+  '(setInterval\s*\(|MutationObserver|addEventListener\s*\(|chrome\.alarms\.create|chrome\.tabs\.onUpdated|chrome\.runtime\.onMessage|Promise\.all|while\s*\(|for\s*\()' . \
   | head -n 500 || true

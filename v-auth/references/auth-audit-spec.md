@@ -1,5 +1,7 @@
 # Auth Audit Spec
 
+Apply the entrypoint’s scope, evidence, frequency x impact scoring, threshold (5), and deferral policy. These checks and severity examples guide inspection; they do not prove a bug or require a new feature. Mark inapplicable checks N/A and unavailable evidence UNVERIFIED. Below-threshold issues do not block completion; review-only requests remain read-only.
+
 Use this reference after the skill triggers. It preserves the detailed audit contract, edge cases, and common failure patterns seen across React + Vite + Supabase + FastAPI projects.
 
 ## Common Auth Failure Patterns
@@ -307,3 +309,7 @@ Use this whenever the frontend claims an action is restricted.
 Build a two-column table:
 
 `frontend restriction claim -> backend enforcement status (yes / no / partial / missing)`
+
+## Current Supabase key boundaries
+
+Distinguish publishable keys (`sb_publishable_...`) and legacy `anon` keys from secret keys (`sb_secret_...`) and legacy `service_role` keys. Public key presence is not itself a secret leak; inspect effective RLS and authorization. Do not infer a JWT’s privileged role from its header prefix alone, and do not print key/token values in reports. Verify current behavior in [Supabase API key guidance](https://supabase.com/docs/guides/getting-started/api-keys).

@@ -5,7 +5,7 @@ Vibe-coding a desktop app often leads to web wrappers that consume 800MB RAM, bu
 ---
 
 ## 1. Local Database & SQLite Integrity
-- **WAL Mode (Write-Ahead Logging)**: Always enable WAL mode on SQLite / CoreData / SwiftData databases. Default rollback journals lock the entire database during writes, causing UI freezes and "database is locked" crashes.
+- **WAL Mode (Write-Ahead Logging)**: Inspect actual concurrency, transaction duration, UI-thread access, and journal behavior. WAL may help suitable local databases; do not alter framework-managed store settings or network-file storage blindly. The following settings are examples, not universal requirements.
   ```sql
   PRAGMA journal_mode = WAL;
   PRAGMA busy_timeout = 5000;
@@ -15,7 +15,7 @@ Vibe-coding a desktop app often leads to web wrappers that consume 800MB RAM, bu
 - **Corruption Recovery**: Implement a fallback to back up and re-initialize a corrupted SQLite database, rather than crashing on launch forever.
 
 ## 2. Atomic File Writes
-- **Never overwrite files directly** (`fileHandle.write(...)` or `.write(to: url)` without atomic options).
+- For replaceable document/state saves, inspect crash-safe replacement and durability. Append-only logs, transactional stores, and streaming writes need their own appropriate write strategy.
 - If the app crashes, OS reboots, or user pulls the power cord mid-write, direct writes leave a zero-byte or corrupt file.
 - **Swift Mandate**:
   ```swift
@@ -36,7 +36,7 @@ Vibe-coding a desktop app often leads to web wrappers that consume 800MB RAM, bu
 
 ## 4. Retain Cycles & Memory Hygiene
 - Long-running desktop apps stay open for weeks. Retain cycles that are harmless in short-lived web sessions will leak gigabytes over time.
-- **Rule**: Always capture `[weak self]` in closures passed to async tasks, notification centers, and network publishers:
+- **Ownership review**: Trace whether a retained closure/task forms a cycle or outlives its owner. Use weak capture or cancellation when warranted; do not add weak captures to every closure mechanically:
   ```swift
   Task { [weak self] in
       guard let self else { return }

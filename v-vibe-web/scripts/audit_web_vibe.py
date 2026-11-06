@@ -64,8 +64,49 @@ def walk_files(repo_path: Path):
             yield p
 
 
+def root_crawl_allowed(content: str, user_agent: str = "Googlebot") -> bool:
+    """Evaluate only the root path, using specific groups and Allow tie precedence.
+
+    Scope: static robots.txt root rules, not fetched HTTP or every route.
+    Reference: https://developers.google.com/crawling/docs/robots-txt/robots-txt-spec
+    """
+    groups = []
+    agents, rules = [], []
+    for raw_line in content.splitlines():
+        line = raw_line.split("#", 1)[0].strip()
+        if ":" not in line:
+            continue
+        key, value = (part.strip() for part in line.split(":", 1))
+        key = key.lower()
+        if key == "user-agent":
+            if rules:
+                groups.append((agents, rules))
+                agents, rules = [], []
+            agents.append(value.lower())
+        elif key in {"allow", "disallow"} and agents:
+            rules.append((key, value))
+    if agents:
+        groups.append((agents, rules))
+    specific = [(max((len(a) for a in agents if a != "*" and a in user_agent.lower()), default=0), rules)
+                for agents, rules in groups]
+    longest = max((length for length, _ in specific), default=0)
+    selected = [rules for length, rules in specific if length == longest] if longest else [rules for agents, rules in groups if "*" in agents]
+    matches = []
+    for rules in selected:
+        for key, rule in rules:
+            if not rule:
+                continue
+            anchored = rule.endswith("$")
+            value = rule[:-1] if anchored else rule
+            pattern = "^" + re.escape(value).replace(r"\*", ".*") + ("$" if anchored else "")
+            if re.search(pattern, "/"):
+                specificity = len(value.replace("*", ""))
+                matches.append((specificity, key == "allow"))
+    return max(matches, default=(0, True))[1]
+
+
 def check_robots_txt(repo_path: Path):
-    robots_files = list(repo_path.glob("**/robots.txt"))
+    robots_files = [p for p in walk_files(repo_path) if p.name == "robots.txt"]
     robots_files = [p for p in robots_files if not any(part in IGNORE_DIRS for part in p.parts)]
 
     result = {
@@ -73,37 +114,29 @@ def check_robots_txt(repo_path: Path):
         "path": str(robots_files[0].relative_to(repo_path)) if robots_files else None,
         "blocks_ai_bots": [],
         "allows_ai_bots": [],
-        "googlebot_blocked": False,
+        "googlebot_blocked": None,
         "has_sitemap": False,
         "issues": [],
     }
 
     if not robots_files:
-        result["issues"].append("Missing robots.txt. Search bots and AI crawlers may not crawl cleanly.")
+        result["issues"].append("No static robots.txt found; verify generated or hosted crawl policy separately. Missing robots.txt alone does not block crawling.")
         return result
 
-    content = robots_files[0].read_text(errors="ignore")
+    try:
+        content = robots_files[0].read_text(encoding="utf-8", errors="ignore")
+    except OSError as exc:
+        result["issues"].append(f"Unable to read robots.txt: {exc}")
+        result["googlebot_blocked"] = None
+        return result
     ai_bots = ["Googlebot", "GPTBot", "OAI-SearchBot", "ClaudeBot", "PerplexityBot", "Applebot-Extended"]
-
-    current_agents = []
-    lines = content.splitlines()
-    for line in lines:
-        line_clean = line.strip().lower()
-        if line_clean.startswith("user-agent:"):
-            agent = line.split(":", 1)[1].strip()
-            current_agents = [agent]
-        elif line_clean.startswith("disallow:"):
-            rule = line.split(":", 1)[1].strip()
-            for agent in current_agents:
-                if (agent.lower() in ["*", "googlebot"]) and rule == "/":
-                    result["googlebot_blocked"] = True
-                for target_bot in ai_bots:
-                    if agent.lower() == target_bot.lower() and rule == "/":
-                        result["blocks_ai_bots"].append(f"{target_bot} disallowed from root")
-                    elif agent.lower() == target_bot.lower() and rule == "":
-                        result["allows_ai_bots"].append(target_bot)
-        elif line_clean.startswith("sitemap:"):
-            result["has_sitemap"] = True
+    result["googlebot_blocked"] = not root_crawl_allowed(content, "Googlebot")
+    for bot in ai_bots:
+        if root_crawl_allowed(content, bot):
+            result["allows_ai_bots"].append(bot)
+        else:
+            result["blocks_ai_bots"].append(f"{bot} disallowed from root")
+    result["has_sitemap"] = any(line.split("#", 1)[0].strip().lower().startswith("sitemap:") for line in content.splitlines())
 
     if not result["has_sitemap"]:
         result["issues"].append("robots.txt does not specify a Sitemap directive.")
@@ -206,7 +239,7 @@ def check_speedmaxxing(repo_path: Path):
                         results["images_without_lazy"].append({"file": rel, "tag": f"<img {img_tag[:60]}...>"})
 
             # Check font imports
-            if "fonts.googleapis.com" in content and "font-display=swap" not in content:
+            if "fonts.googleapis.com" in content and "display=swap" not in content:
                 results["render_blocking_fonts"].append(rel)
 
             if "React.lazy" in content or "dynamic(" in content or "import(" in content:
@@ -216,7 +249,7 @@ def check_speedmaxxing(repo_path: Path):
                 results["debounced_inputs"] = True
 
     # Check package.json for heavy packages
-    package_files = list(repo_path.glob("**/package.json"))
+    package_files = [p for p in walk_files(repo_path) if p.name == "package.json"]
     package_files = [p for p in package_files if not any(part in IGNORE_DIRS for part in p.parts)]
     heavy_libs = ["moment", "lodash", "recharts", "three", "lottie-web"]
 
@@ -269,7 +302,7 @@ def check_prelaunch_essentials(repo_path: Path):
                 results["has_twitter_card"] = True
             if "<form" in content.lower():
                 results["has_forms"] = True
-                if any(k in content.lower() for k in ["turnstile", "recaptcha", "hcaptcha", "honeypot", "csrf"]):
+                if any(k in content.lower() for k in ["turnstile", "recaptcha", "hcaptcha", "honeypot"]):
                     results["has_form_bot_defense"] = True
 
     return results
@@ -369,7 +402,7 @@ def check_design_and_codebase_slop(repo_path: Path):
 
 def check_google_technical_seo(repo_path: Path):
     results = {
-        "rendering_architecture": "Client-Side SPA (Empty <div> crawler risk)",
+        "rendering_architecture": "Unknown from source inventory; inspect rendered output",
         "sitemap_files": [],
         "noindex_tags": [],
         "canonical_tags": [],
@@ -389,7 +422,7 @@ def check_google_technical_seo(repo_path: Path):
     }
 
     # 1. Framework detection in package.json
-    package_files = list(repo_path.glob("**/package.json"))
+    package_files = [p for p in walk_files(repo_path) if p.name == "package.json"]
     package_files = [p for p in package_files if not any(part in IGNORE_DIRS for part in p.parts)]
     for pf in package_files:
         try:
@@ -421,7 +454,7 @@ def check_google_technical_seo(repo_path: Path):
     # Regex patterns
     noindex_pat = re.compile(r'(?:<meta[^>]*name=["\']robots["\'][^>]*content=["\'][^"\']*noindex|X-Robots-Tag:\s*noindex)', re.IGNORECASE)
     canonical_pat = re.compile(r'(?:<link[^>]*rel=["\']canonical["\']|canonical:\s*["\']https?:\/\/|metadata\.alternates\.canonical)', re.IGNORECASE)
-    h1_pat = re.compile(r'<h1\b|#\s+', re.IGNORECASE)
+    h1_pat = re.compile(r'<h1\b|^#(?!#)\s+', re.IGNORECASE | re.MULTILINE)
     alt_pat = re.compile(r'<img\s+([^>]+)>', re.IGNORECASE)
     breadcrumb_pat = re.compile(r'(?:<nav[^>]*aria-label=["\']breadcrumb|BreadcrumbList|from ["\'].*?breadcrumb)', re.IGNORECASE)
     author_pat = re.compile(r'(?:rel=["\']author["\']|class=["\'][^"\']*author-bio|@type["\']\s*:\s*["\']Person["\']|author:\s*["\'][^"\']+["\'])', re.IGNORECASE)
@@ -475,7 +508,7 @@ def check_google_technical_seo(repo_path: Path):
         # Missing alt attributes
         for m in alt_pat.finditer(content):
             tag_content = m.group(1)
-            if 'alt=' not in tag_content:
+            if not re.search(r"\balt\s*=", tag_content, re.IGNORECASE):
                 if len(results["images_missing_alt"]) < 8:
                     results["images_missing_alt"].append({"file": rel, "tag": f"<img {tag_content[:50]}...>"})
 
@@ -498,8 +531,8 @@ def main():
     args = parse_args()
     repo_path = Path(args.repo).resolve()
 
-    if not repo_path.exists():
-        print(f"Error: path does not exist: {repo_path}", file=sys.stderr)
+    if not repo_path.is_dir():
+        print(f"Error: not a repository directory: {repo_path}", file=sys.stderr)
         sys.exit(1)
 
     robots_report = check_robots_txt(repo_path)
@@ -510,6 +543,7 @@ def main():
     google_seo_report = check_google_technical_seo(repo_path)
 
     full_report = {
+        "evidence_scope": "Static source candidates; runtime enforcement and deployment remain unverified",
         "repo": str(repo_path),
         "robots_txt": robots_report,
         "geo_and_ai_search": geo_report,
@@ -523,6 +557,7 @@ def main():
         print(json.dumps(full_report, indent=2))
         return
 
+    print("Static source candidates only; unmatched patterns do not prove safety or absence.")
     print("=" * 70)
     print("V-VIBE-WEB: WEBSITE & LANDING PAGE AUDIT SUMMARY")
     print("=" * 70)
@@ -530,7 +565,7 @@ def main():
     print("\n1. GEO & AI Search Discovery (ChatGPT / Perplexity / Claude):")
     print(f"  - robots.txt found: {'YES' if robots_report['found'] else 'NO (Missing!)'}")
     if robots_report["blocks_ai_bots"]:
-        print(f"  - [WARNING] Blocks AI crawlers: {', '.join(robots_report['blocks_ai_bots'])}")
+        print(f"  - [INFO] Static policy blocks these crawler roots; preserve intended policy: {', '.join(robots_report['blocks_ai_bots'])}")
     if robots_report["allows_ai_bots"]:
         print(f"  - AI crawlers explicitly allowed: {', '.join(robots_report['allows_ai_bots'])}")
     print(f"  - JSON-LD structured data: {'YES' if geo_report['has_json_ld'] else 'NO (Missing schema.org)'}")
@@ -560,7 +595,7 @@ def main():
     print(f"  - Custom 500/Error page: {'YES' if prelaunch_report['has_custom_500'] else 'NO'}")
     print(f"  - Privacy Policy: {'YES' if prelaunch_report['has_privacy_policy'] else 'NO'}")
     print(f"  - Terms of Service: {'YES' if prelaunch_report['has_terms_of_service'] else 'NO'}")
-    print(f"  - Form bot defense (Turnstile/honeypot): {'YES' if prelaunch_report['has_form_bot_defense'] else ('N/A' if not prelaunch_report['has_forms'] else 'NO (Vulnerable to spam bots)')}")
+    print(f"  - Form bot-defense patterns (Turnstile/honeypot): {'YES' if prelaunch_report['has_form_bot_defense'] else ('N/A' if not prelaunch_report['has_forms'] else 'NOT DETECTED; verify server defenses')}")
 
     print("\n4. Design Slop Indicators (AI UI Clichés):")
     ds = slop_report["design_slop"]
@@ -604,24 +639,26 @@ def main():
         print(f"  - XML Sitemap: FOUND ({', '.join(google_seo_report['sitemap_files'])})")
     else:
         print("  - XML Sitemap: MISSING (Create sitemap.xml to enable URL discovery)")
-    print(f"  - Googlebot Access in robots.txt: {'BLOCKED from root / [CRITICAL]' if robots_report.get('googlebot_blocked') else 'ALLOWED / UNBLOCKED'}")
+    blocked = robots_report.get("googlebot_blocked")
+    access = "UNVERIFIED (no readable static policy)" if blocked is None else "ROOT DISALLOWED by static policy" if blocked else "ROOT ALLOWED by static policy; deployment unverified"
+    print(f"  - Googlebot Access in robots.txt: {access}")
     if google_seo_report["noindex_tags"]:
         print(f"  - [CRITICAL] noindex meta tags found in production files ({len(google_seo_report['noindex_tags'])} files):")
         for nf in google_seo_report["noindex_tags"][:3]:
             print(f"    * {nf}")
     else:
-        print("  - noindex Tag Audit: PASS (No accidental noindex tags)")
+        print("  - noindex Tag Audit: No configured pattern found; deployed directives UNVERIFIED")
     if google_seo_report["canonical_tags"]:
         print(f"  - Canonical Tags (rel=canonical): IMPLEMENTED ({len(google_seo_report['canonical_tags'])} files)")
     else:
-        print("  - Canonical Tags: MISSING (Risk of duplicate content penalties)")
+        print("  - Canonical Tags: No configured pattern found; inspect generated metadata and canonical signals")
     h1_iss = google_seo_report["h1_issues"]
     if h1_iss["missing_h1"]:
         print(f"  - [WARNING] Pages missing <h1> tags ({len(h1_iss['missing_h1'])} pages): {', '.join(h1_iss['missing_h1'][:3])}")
     if h1_iss["multiple_h1"]:
         print(f"  - [WARNING] Pages with multiple <h1> tags: {', '.join(item['file'] for item in h1_iss['multiple_h1'][:3])}")
     if not h1_iss["missing_h1"] and not h1_iss["multiple_h1"]:
-        print("  - <h1> Hierarchy: PASS (Clean single H1 structure)")
+        print("  - <h1> Hierarchy: No configured pattern violations found; rendered structure UNVERIFIED")
     if google_seo_report["images_missing_alt"]:
         print(f"  - [WARNING] Images missing alt text ({len(google_seo_report['images_missing_alt'])} instances)")
     else:

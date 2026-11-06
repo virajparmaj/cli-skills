@@ -64,7 +64,11 @@ run_rg_server() {
 
 docs="$(find "$repo" -maxdepth 2 \( -name 'CLAUDE.md' -o -name 'README.md' -o -name '.env.example' -o -path '*/notes/*.md' \) 2>/dev/null | sort | sed -n '1,80p')"
 manifests="$(find "$repo" -maxdepth 2 \( -name 'package.json' -o -name 'pyproject.toml' -o -name 'vercel.json' -o -name 'render.yaml' -o -name 'Dockerfile' -o -name 'fly.toml' \) 2>/dev/null | sort | sed -n '1,40p')"
-server_dirs="$(find "$repo" \( -path "$repo/api" -o -path "$repo/backend" -o -path "$repo/supabase/functions" -o -path "$repo/supabase/migrations" \) -type d 2>/dev/null | sort | sed -n '1,40p')"
+server_dirs="$(
+  for relative_path in api backend supabase/functions supabase/migrations; do
+    [ ! -d "$repo/$relative_path" ] || printf '%s\n' "$repo/$relative_path"
+  done | sort
+)"
 
 env_refs="$(run_rg 'VITE_[A-Z0-9_]+|import\.meta\.env\.[A-Z0-9_]+|process\.env\.[A-Z0-9_]+' )"
 endpoint_refs="$(

@@ -1,29 +1,27 @@
 ---
 name: v-declutter
-description: "Audit and streamline local repository file architecture, directory hierarchy, naming redundancy, fragmented patch sprawl, and dead code while strictly preserving functionality and test suites. Use when asked to audit or declutter project structure, flatten unnecessary directory nesting, consolidate fragmented data files or seeds, clean up historical patch sprawl, streamline file names, remove wrapper boilerplate, merge redundant indirection layers, eliminate duplicate logic, or prune dead code without breaking tests. Triggers include 'v-declutter', 'v-structure', 'audit and declutter', 'declutter project structure', 'clean up patch sprawl', 'flatten directory nesting', 'streamline file names', 'remove wrapper boilerplate'."
+description: "Review or simplify repository structure, redundant wrappers, duplicate logic, dead files, and Lovable/GPT-Engineer artifacts while preserving behavior and data. Use for requested decluttering or structural cleanup; an audit-only request stays read-only."
 ---
 
 # Codebase Declutter & Architecture Streamliner
 
-Audit, beautify, and reorganize repository file architecture, directory hierarchy, naming redundancy, fragmented patch sprawl, and dead code while strictly preserving test suites, data integrity, and runtime behavior.
+## Practical review and implementation
 
-This skill **EXECUTES** structural cleanups end to end: it audits the repository, presents a deterministic restructuring plan, safely moves files and remaps imports, unwraps redundant wrapper layers, consolidates patch sprawl, deduplicates logic into helpers, and verifies zero regressions via test suites and production builds.
+- Confirm a reachable trigger in current code, inputs, and configuration before calling something a bug. Checklists and size/style heuristics are inspection prompts, not proof; do not add systems for hypothetical future needs.
+- For every bug, report **frequency (1–10) x impact (1–10) = score**, the trigger, and a brief reason for each rating. Frequency measures occurrence in actual usage; confidence in the evidence is separate.
+- Default fix threshold: **5**. Below 5, leave code alone and update one deduplicated existing backlog item; if no backlog exists or remote issue creation is not authorized, use **Deferred issues**. Deferrals do not block completion or start another fix cycle.
+- At 5 or above, use the smallest verified fix only within the authorized task. Review-only requests stay read-only; preserve prior authorization across turns. Required checks and explicitly requested fixes still apply.
+- Pass scope, evidence, scores, threshold, and deferrals to any fixer. Stop when the requested behavior works, eligible in-scope findings are addressed, and required checks pass; repeat only for new changes, failures, or unresolved evidence.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+Audit, beautify, and reorganize repository file architecture, directory hierarchy, naming redundancy, fragmented patch sprawl, AI-generator/Lovable boilerplate, and dead code while strictly preserving test suites, data integrity, and runtime behavior.
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
+For a cleanup request, inventory candidates, prepare a concrete action table, apply scoped moves and import updates, and verify behavior. For a review request, stop at the action table. Before editing, record existing changes so unrelated work and staged selections survive.
 
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Bound the review.** Cover the requested scope and verify plausible findings. Stop once that scope is covered and required checks pass; expand or repeat only for changed code, failed checks, or unresolved evidence. State coverage gaps; do not chase speculative cases to fill a report.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
+## Evidence and execution
 
----
+- Resolve bundled `scripts/` and `references/` from this skill’s directory, and pass the target repository separately. Use relevant discovery helpers after checking their arguments and effects; their output identifies candidates, not an exhaustive verdict.
+- Confirm candidates in source and current configuration, and use runtime evidence when the conclusion depends on runtime behavior. Cite exact paths/lines or measurements; distinguish verified findings, inferred risks, and unavailable evidence. A failed helper does not invalidate independently verified facts.
+- Read only references relevant to the requested scope. Mark inapplicable checks **N/A** and unavailable checks **UNVERIFIED**; do not infer a missing capability from an unmatched scanner pattern.
 
 ## The 4 Core Focus Areas
 
@@ -53,10 +51,9 @@ Run this skill in your highest-effort mode, whatever model you are. Prefer corre
 ### Step 1: Pre-Flight Baseline Verification
 1. Inspect repo root: detect package manager (`npm`, `pnpm`, `yarn`, `bun`, `uv`, `poetry`, `pip`).
 2. Run baseline tests to verify the starting state is green:
-   - JavaScript/TypeScript: `npm test` or `npm run test` or `npx vitest run`
-   - Python: `pytest`
-3. Run baseline build:
-   - `npm run build`
+   - Use the repository’s configured non-watch test command and installed package manager. Do not download a new test runner to manufacture a baseline.
+   - For Python, use the project environment and configured test command.
+3. Run the configured build when the project has one; mark absent checks N/A.
 4. If baseline tests or build fail, stop and flag the pre-existing error before making any changes.
 
 ### Step 2: Deterministic Inventory & Redundancy Scan
@@ -68,6 +65,7 @@ Run this skill in your highest-effort mode, whatever model you are. Prefer corre
    - Duplicate utility filenames
    - Potential orphan source files
 2. Read [references/declutter-playbook.md](references/declutter-playbook.md) for domain-specific refactoring recipes and rules.
+3. If stripping AI-generator or Lovable traces, run `bash scripts/find-lovable-traces.sh <repo-path>` and follow [references/lovable-removal-playbook.md](references/lovable-removal-playbook.md).
 
 ### Step 3: Formulate Restructuring Plan
 Draft the Action Plan Table before mutating the filesystem:
@@ -75,7 +73,7 @@ Draft the Action Plan Table before mutating the filesystem:
 - Identify all dependent files whose `import` statements must be remapped.
 
 ### Step 4: Execute Restructuring & Import Remapping
-1. **Atomic File Moves**: Use `git mv` when inside git to preserve commit history.
+1. **File Moves**: Move only planned files; Git detects renames from content. Use `git mv` only when staging those changes is authorized, and preserve existing staged selections.
 2. **Remap Imports**: Update both relative (`./`, `../`) and path alias (`@/`) imports across the codebase.
 3. **Consolidate Seeds/Data**: Merge fragmented seed files into canonical domain files without duplicate keys or data loss.
 4. **Unwrap Pass-Through Wrappers**: Inline simple pass-through layers into parent consumers, preserving any context providers or error boundaries.
@@ -91,7 +89,7 @@ Draft the Action Plan Table before mutating the filesystem:
 3. Run production build:
    - `npm run build`
 4. Verify chunk sizes if frontend: ensure no bundle chunks exceed 500 kB without explanation.
-5. If tests or build fail, diagnose and fix the import/type issue immediately. If unfixable, roll back using `git checkout -- .`.
+5. If verification fails, isolate the regression and undo only this task’s affected edits from the recorded baseline. Never use repository-wide reset, checkout, or clean commands; preserve unrelated and pre-existing work. Report unresolved failures.
 
 ---
 
@@ -122,7 +120,7 @@ A concise bulleted summary of structural metrics:
 - **Files moved / consolidated**: `Y`
 - **Redundant wrappers eliminated**: `Z`
 - **Dead files / orphan code pruned**: `W`
-- **Data integrity**: `100% verified (0 lost records/keys)`
+- **Data integrity**: measured record/key comparison, or `N/A` / `UNVERIFIED` with reason
 
 ### 3. Quality Gate & Zero-Regression Verdict
 
@@ -154,6 +152,6 @@ Build: FAIL — <exact error line>. No success claimed; fix required before ship
 ## Boundary with Adjacent Skills
 
 - `v-vibe`: Read-only post-vibe audit that inspects architecture debt and slop without modifying files. Use `v-vibe` for review only; use `v-declutter` when you want active restructuring.
-- `v-delovable`: Specifically targets Lovable / GPT-Engineer boilerplate, tags, and README cleanup.
+- Lovable / GPT-Engineer cleanup is included here via [references/lovable-removal-playbook.md](references/lovable-removal-playbook.md); `v-delovable` is a retired name.
 - `v-scripts`: Engineering audit for runtime latency, bundle size, and dead scripts.
 - `v-declutter`: The active structural reorganizer that simplifies directory trees, un-nests single-child folders, consolidates fragmented data patches, unwraps indirection shells, and eliminates logic duplication.

@@ -1,33 +1,26 @@
 ---
 name: v-vibe-app
-description: "Review-only post-vibe audit for full-stack SaaS web applications, mobile backends, and APIs. Audits the 19 distributed systems pillars (rate limiting, caching, queues, circuit breakers, timeouts, retries, idempotency, sagas), the 80+ enterprise production readiness checklist (database migrations, non-blocking indexes, connection pooling, integer money, RLS, IDOR prevention, MFA, SAML/SSO, SCIM, billing, webhooks, audit logs), Codebase Slop indicators (implicit coupling, layer-first folders, duplication, representable illegal states, god files, shotgun surgery, layering violations, pass-through wrappers, errors/validation not at boundary), Design Slop indicators (badge spam, italicized words, instrument serif + negative kerning, over-detailed UI, dividers, multiple color opacities, containers with borders, superfluous diagrams, code breadcrumbs, section numbering), and the Pre-Launch 20 release gate. Trigger on audit app, audit saas, audit backend, v-vibe-app, v-vibe-saas, distributed systems audit, enterprise readiness audit, codebase slop, backend slop."
+description: "Review SaaS applications, backends, and APIs for production reliability, data integrity, tenant isolation, and maintainability. Use for a post-vibe app or backend audit; apply distributed-systems and enterprise checks only where the product needs them."
 ---
 
 # Post-Vibe SaaS Application & Backend Audit
 
 ## Practical review and implementation
 
-- Do not design for rare or future cases nobody asked about.
-- For each bug, report **frequency (1-10)** in current usage, **impact (1-10)**, **frequency x impact = score**, and the reachable trigger with evidence. Keep confidence separate from occurrence frequency; hypothetical future requirements are not bugs. Checklist examples are inspection prompts, not automatic findings or severity assignments.
-- Default fix threshold: **5**, unless the user explicitly changes it. **Below 5:** record one deduplicated backlog issue and leave the code alone; use **Deferred issues** in the review if no backlog exists or remote issue creation is not already authorized. Do not block completion or reopen the same issue without new evidence or an explicit request.
-- **5 or above:** propose the smallest verified fix; implement only within the authorized task. Review-only work stays review-only. Preserve existing report structure and add the scores to each finding. Required checks and explicitly requested fixes still apply.
-- Pass evidence, scores, threshold, and deferrals to the fixer. Stop after the requested scope is covered and required checks pass; re-review affected paths only when changes, failures, or unresolved evidence justify it.
+- Confirm a reachable trigger in current code, inputs, and configuration before calling something a bug. Checklists and size/style heuristics are inspection prompts, not proof; do not add systems for hypothetical future needs.
+- For every bug, report **frequency (1–10) x impact (1–10) = score**, the trigger, and a brief reason for each rating. Frequency measures occurrence in actual usage; confidence in the evidence is separate.
+- Default fix threshold: **5**. Below 5, leave code alone and update one deduplicated existing backlog item; if no backlog exists or remote issue creation is not authorized, use **Deferred issues**. Deferrals do not block completion or start another fix cycle.
+- At 5 or above, use the smallest verified fix only within the authorized task. Review-only requests stay read-only; preserve prior authorization across turns. Required checks and explicitly requested fixes still apply.
+- Pass scope, evidence, scores, threshold, and deferrals to any fixer. Stop when the requested behavior works, eligible in-scope findings are addressed, and required checks pass; repeat only for new changes, failures, or unresolved evidence.
+
 
 Use this skill when auditing a full-stack SaaS application, web app backend, or API. Stay in review mode unless the user explicitly requests implementation.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and execution
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
-
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found in repository`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Bound the review.** Cover the requested scope and verify plausible findings. Stop once that scope is covered and required checks pass; expand or repeat only for changed code, failed checks, or unresolved evidence. State coverage gaps; do not chase speculative cases to fill a report.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix.
+- Resolve bundled `scripts/` and `references/` from this skill’s directory, and pass the target repository separately. Use relevant discovery helpers after checking their arguments and effects; their output identifies candidates, not an exhaustive verdict.
+- Confirm candidates in source and current configuration, and use runtime evidence when the conclusion depends on runtime behavior. Cite exact paths/lines or measurements; distinguish verified findings, inferred risks, and unavailable evidence. A failed helper does not invalidate independently verified facts.
+- Read only references relevant to the requested scope. Mark inapplicable checks **N/A** and unavailable checks **UNVERIFIED**; do not infer a missing capability from an unmatched scanner pattern.
 
 ## Quick Start
 
@@ -35,10 +28,14 @@ Run this skill in your highest-effort mode, whatever model you are. Prefer corre
    ```bash
    python3 "<skill-path>/scripts/audit_app_vibe.py" --repo "<repo>"
    ```
-2. Read the domain references before evaluating:
+2. Read only domain references relevant to this review:
    - [references/distributed-systems-resilience.md](references/distributed-systems-resilience.md) for the 19 distributed systems pillars
    - [references/enterprise-production-checklist.md](references/enterprise-production-checklist.md) for the 80+ enterprise production criteria
    - [references/prelaunch-20-checklist.md](references/prelaunch-20-checklist.md) for the pre-launch release gate
+
+## Applicability
+
+Establish the current product, traffic, deployment, and data model before applying enterprise or distributed-systems checks. Missing Redis, queues, circuit breakers, SSO, SCIM, soft deletes, or a particular folder structure is not itself a defect. Follow the reachable request and failure path and its existing safeguards.
 
 ## Workflow
 
@@ -135,6 +132,7 @@ Produce the audit report in this exact structure:
 ### [P0/P1/P2/P3-CODE] Title
 - **Severity**: P0 (Launch blocker / data loss / security breach) | P1 (High risk / downtime) | P2 (Medium) | P3 (Low)
 - **Status**: Verified | Unverified Concern
+- **Trigger and score**: frequency (1–10, reason) x impact (1–10, reason) = score; confidence stated separately
 - **File**: `path/to/file:line`
 - **What**: Exact code or configuration evidence.
 - **Why it matters**: Production impact (data corruption, billing error, cascading outage, tenant leak).

@@ -12,9 +12,11 @@ Audits:
 import argparse
 import json
 import os
+import plistlib
 import re
 import sys
 import xml.etree.ElementTree as ET
+from xml.parsers.expat import ExpatError
 from pathlib import Path
 
 IGNORE_DIRS = {
@@ -60,15 +62,23 @@ def walk_files(repo_path: Path):
 
 def detect_macos_project_type(repo_path: Path):
     types = []
-    if list(repo_path.glob("**/*.xcodeproj")) or list(repo_path.glob("**/Package.swift")):
+    files = list(walk_files(repo_path))
+    if any(p.name == "Package.swift" or any(part.endswith(".xcodeproj") for part in p.relative_to(repo_path).parts) for p in files):
         types.append("Native Swift/Xcode")
-    if list(repo_path.glob("**/tauri.conf.json")):
+    if any(p.name == "tauri.conf.json" for p in files):
         types.append("Tauri (Rust + Web)")
-    if list(repo_path.glob("**/electron-builder.yml")) or list(repo_path.glob("**/electron-builder.json")):
+    has_electron = any(p.name in {"electron-builder.yml", "electron-builder.json"} for p in files)
+    for p in files:
+        if p.name != "package.json":
+            continue
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+            dependencies = {**data.get("dependencies", {}), **data.get("devDependencies", {})}
+            has_electron = has_electron or "electron" in dependencies
+        except (OSError, ValueError, TypeError):
+            continue
+    if has_electron:
         types.append("Electron (Node + Web)")
-    elif any("electron" in p.read_text(errors="ignore").lower() for p in repo_path.glob("**/package.json")):
-        types.append("Electron (Node + Web)")
-
     return types or ["Generic / Unknown Desktop"]
 
 
@@ -83,32 +93,30 @@ def check_entitlements_and_sandbox(repo_path: Path):
         "bookmarks_app_scope": False,
     }
 
-    ent_files = list(repo_path.glob("**/*.entitlements"))
+    ent_files = [p for p in walk_files(repo_path) if p.suffix == ".entitlements"]
     ent_files = [p for p in ent_files if not any(part in IGNORE_DIRS for part in p.parts)]
 
     for p in ent_files:
         rel = str(p.relative_to(repo_path))
         results["entitlements_files"].append(rel)
         try:
-            content = p.read_text(errors="ignore")
-            if "com.apple.security.app-sandbox" in content and "<true/>" in content:
-                results["sandbox_enabled"] = True
-            if "com.apple.security.network.client" in content:
-                results["network_client"] = True
-            if "com.apple.security.network.server" in content:
-                results["network_server"] = True
-            if "com.apple.security.files.user-selected" in content:
-                results["user_selected_files"] = True
-            if "com.apple.security.files.bookmarks.app-scope" in content:
-                results["bookmarks_app_scope"] = True
-
-            for line in content.splitlines():
-                if "temporary-exception" in line:
-                    match = re.search(r'<key>([^<]+)<\/key>', line)
-                    if match:
-                        results["temporary_exceptions"].append({"file": rel, "exception": match.group(1)})
-        except Exception:
-            pass
+            with p.open("rb") as handle:
+                entitlements = plistlib.load(handle)
+            if not isinstance(entitlements, dict):
+                continue
+            results["sandbox_enabled"] |= entitlements.get("com.apple.security.app-sandbox") is True
+            results["network_client"] |= entitlements.get("com.apple.security.network.client") is True
+            results["network_server"] |= entitlements.get("com.apple.security.network.server") is True
+            results["user_selected_files"] |= any(
+                key.startswith("com.apple.security.files.user-selected") and value is True
+                for key, value in entitlements.items()
+            )
+            results["bookmarks_app_scope"] |= entitlements.get("com.apple.security.files.bookmarks.app-scope") is True
+            for key, value in entitlements.items():
+                if "temporary-exception" in key and value not in (False, None, [], ""):
+                    results["temporary_exceptions"].append({"file": rel, "exception": key})
+        except (OSError, ValueError, plistlib.InvalidFileException, ExpatError):
+            results.setdefault("unreadable_entitlements", []).append(rel)
 
     return results
 
@@ -122,7 +130,7 @@ def check_privacy_manifest_and_store_readiness(repo_path: Path):
         "deprecated_apis": [],
     }
 
-    manifests = list(repo_path.glob("**/PrivacyInfo.xcprivacy"))
+    manifests = [p for p in walk_files(repo_path) if p.name == "PrivacyInfo.xcprivacy"]
     manifests = [p for p in manifests if not any(part in IGNORE_DIRS for part in p.parts)]
     if manifests:
         results["has_privacy_manifest"] = True
@@ -236,8 +244,8 @@ def main():
     args = parse_args()
     repo_path = Path(args.repo).resolve()
 
-    if not repo_path.exists():
-        print(f"Error: path does not exist: {repo_path}", file=sys.stderr)
+    if not repo_path.is_dir():
+        print(f"Error: not a repository directory: {repo_path}", file=sys.stderr)
         sys.exit(1)
 
     project_types = detect_macos_project_type(repo_path)
@@ -247,6 +255,7 @@ def main():
     web_desktop = check_electron_tauri_security(repo_path)
 
     full_report = {
+        "evidence_scope": "Static source candidates; runtime enforcement and deployment remain unverified",
         "repo": str(repo_path),
         "project_types": project_types,
         "entitlements": entitlements,
@@ -259,6 +268,7 @@ def main():
         print(json.dumps(full_report, indent=2))
         return
 
+    print("Static source candidates only; unmatched patterns do not prove safety or absence.")
     print("=" * 70)
     print("V-VIBE-MACOS: MACOS DESKTOP APP PRODUCTION AUDIT")
     print("=" * 70)
@@ -269,7 +279,7 @@ def main():
     print(f"  - Network Client: {'YES' if entitlements['network_client'] else 'NO'}")
     print(f"  - Network Server: {'YES' if entitlements['network_server'] else 'NO'}")
     print(f"  - User-Selected File Access: {'YES' if entitlements['user_selected_files'] else 'NO'}")
-    print(f"  - Security-Scoped Bookmarks: {'YES' if entitlements['bookmarks_app_scope'] else 'NO (File access lost on restart)'}")
+    print(f"  - Security-Scoped Bookmarks: {'YES' if entitlements['bookmarks_app_scope'] else 'NOT DETECTED; verify the retained file-access flow'}")
     if entitlements["temporary_exceptions"]:
         print(f"  - [WARNING] Temporary Exception Entitlements ({len(entitlements['temporary_exceptions'])} found):")
         for ex in entitlements["temporary_exceptions"][:3]:
@@ -278,7 +288,7 @@ def main():
         print("  - Temporary Exceptions: NONE (Clean entitlements)")
 
     print("\n2. Privacy Manifest & App Store Readiness:")
-    print(f"  - PrivacyInfo.xcprivacy Manifest: {'FOUND' if privacy['has_privacy_manifest'] else 'MISSING (App Store Rejection Blocker)'}")
+    print(f"  - PrivacyInfo.xcprivacy Manifest: {'FOUND' if privacy['has_privacy_manifest'] else 'NOT DETECTED; verify applicable API/SDK requirements'}")
     if privacy["has_sparkle_updater"]:
         print(f"  - Sparkle Auto-Updater: DETECTED")
         print(f"    * EdDSA Public Key (SUPublicEDKey): {'CONFIGURED' if privacy['has_sparkle_eddsa_key'] else 'MISSING (Critical update security gap)'}")
@@ -288,7 +298,7 @@ def main():
             print(f"    * {dep['file']}: {dep['api']}")
 
     print("\n3. Native Desktop Architecture & Stability:")
-    print(f"  - SQLite / CoreData WAL Mode: {'CONFIGURED' if swift_arch['sqlite_wal_configured'] else 'NOT DETECTED (Concurrency/Locking risk)'}")
+    print(f"  - SQLite / CoreData WAL Mode: {'CONFIGURED' if swift_arch['sqlite_wal_configured'] else 'NOT DETECTED; assess actual database concurrency'}")
     if swift_arch["polling_timers"]:
         print(f"  - [WARNING] High-frequency polling timers detected (Battery/CPU burn risk):")
         for t in swift_arch["polling_timers"][:3]:
@@ -301,9 +311,9 @@ def main():
     if "Electron (Node + Web)" in project_types or web_desktop["node_integration_danger"]:
         print("\n4. Electron / Tauri Container Security:")
         if web_desktop["node_integration_danger"]:
-            print(f"  - [CRITICAL] nodeIntegration: true detected in: {', '.join(web_desktop['node_integration_danger'])}")
+            print(f"  - [REVIEW] nodeIntegration: true capability pattern detected in: {', '.join(web_desktop['node_integration_danger'])}")
         if web_desktop["context_isolation_disabled"]:
-            print(f"  - [CRITICAL] contextIsolation: false detected in: {', '.join(web_desktop['context_isolation_disabled'])}")
+            print(f"  - [REVIEW] contextIsolation: false configuration detected in: {', '.join(web_desktop['context_isolation_disabled'])}")
         if web_desktop["tauri_allowlist_broad"]:
             print(f"  - [WARNING] Tauri allowlist has broad 'all: true' permissions configured")
     print("=" * 70)

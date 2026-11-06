@@ -1,5 +1,7 @@
 # Audit Playbook
 
+Apply the entrypoint’s scope, evidence, frequency x impact scoring, threshold (5), and deferral policy. These checks and severity examples guide inspection; they do not prove a bug or require a new feature. Mark inapplicable checks N/A and unavailable evidence UNVERIFIED. Below-threshold issues do not block completion; review-only requests remain read-only.
+
 ## Audit Posture
 
 - Audit first. Do not make code changes unless the user explicitly asks.
@@ -238,10 +240,11 @@ Call out what must be measured before making risky optimizations.
 
 End the audit with:
 
-- Top 20 changes by impact-to-effort ratio
-- Top 10 likely sources of wasted compute
-- Top 10 likely sources of latency
-- Top 10 safest cleanup or deletion candidates
+- Ranked changes by impact-to-effort ratio
+- Supported sources of wasted compute and latency
+- Verified safe cleanup or deletion candidates
+
+Include only as many distinct items as the evidence supports; do not fill numerical quotas.
 
 ## Constraints
 

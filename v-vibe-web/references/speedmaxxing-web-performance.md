@@ -1,6 +1,16 @@
 # Speedmaxxing Web Performance: 20-Point Guide
 
-A 1-second delay can cost up to 20% in conversion drops. Use this checklist to audit and optimize vibe-coded websites and web applications for peak Core Web Vitals (LCP, INP, CLS).
+> **Every vibe coder's performance prompt:**
+> *"My website feels slow. Audit the actual application and find what's making it slow."*
+>
+> **Core Web Vitals Targets:**
+> - **LCP**: 2.5 seconds or less.
+> - **INP**: under 200 milliseconds.
+> - **CLS**: under 0.1.
+>
+> **The Golden Rule:**
+> *Fix the biggest real bottlenecks first. Don't optimise random code just to make a report look better. A fast website is not just about a green Lighthouse score. People should actually feel the difference.*
+> *(Dedicated audit skill: `v-perf`)*
 
 ---
 
@@ -14,9 +24,10 @@ A 1-second delay can cost up to 20% in conversion drops. Use this checklist to a
 - Convert all static images to **AVIF** (best compression) with **WebP** fallback.
 - Tools: `@squoosh/lib`, `sharp`, `next/image`, or Cloudflare Polish.
 
-## 3. Lazy-Load Below-the-Fold Images
-- Add `loading="lazy"` to all images, iframes, and embeds below the viewport fold.
-- Hero images **MUST NOT** be lazy-loaded; hero images should use `fetchpriority="high"`.
+## 3. Image Dimensions & Lazy-Loading Strategy
+- Add explicit `width` and `height` (or CSS `aspect-ratio`) to all images to prevent layout shifts (CLS < 0.1).
+- Add `loading="lazy"` and `decoding="async"` to all images, iframes, and embeds below the viewport fold.
+- Hero images **MUST NOT** be lazy-loaded; above-the-fold hero images should use `fetchpriority="high"` (or `<Image priority>`).
 
 ## 4. Global CDN & Edge Distribution
 - Deliver HTML, images, and static assets from an edge CDN (Cloudflare, Vercel Edge Network, AWS CloudFront).
@@ -95,6 +106,7 @@ A 1-second delay can cost up to 20% in conversion drops. Use this checklist to a
 - Test the application on an inexpensive Android phone over 4G or throttled Wi-Fi.
 - High-end developer MacBooks mask heavy JavaScript execution bottlenecks.
 
-## 20. Architectural AI Performance Diagnostic
+## 20. Architectural Diagnostic & Zero Regressions Gate
 - Ask your AI assistant with codebase context:
   *"Analyze this route for unnecessary re-renders, layout thrashing, unmemoized expensive calculations, and bloated dependencies."*
+- **Make sure performance fixes don't break existing features**: run automated test suites (`npm test`, `pytest`) and build verification (`npm run build`) before declaring completion.

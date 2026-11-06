@@ -33,7 +33,7 @@ These recurring patterns come from React + Vite + TypeScript + Tailwind + shadcn
 - Sensitive or user-impacting data in `localStorage` (health data, PII, demo orders, sessions).
 - Demo credentials shipped via `VITE_*`.
 - Missing CSP headers entirely.
-- Overly permissive FastAPI CORS such as `allow_methods=["*"]` or `allow_headers=["*"]`.
+- Inspect CORS origins, credentials, methods, headers, and reachable response data together. Wildcard methods/headers alone do not prove unauthorized access; check credential compatibility and actual browser behavior. See [FastAPI CORS](https://fastapi.tiangolo.com/tutorial/cors/).
 - `WITH CHECK (true)` on Supabase `INSERT` policies — sometimes intentional and public, sometimes a gap.
 - Route protection applied to some pages but not all.
 - Missing rate limiting on public endpoints.
@@ -95,3 +95,7 @@ Keep these reasons in mind so the skill preserves the original intent:
 - Do not recommend `X-XSS-Protection` as a hardening must-have; modern best practice can be `0`.
 - Check public forms for honeypots or CAPTCHA as an anti-abuse pattern.
 - Check idempotency on public writes to prevent duplicate submissions.
+
+## Current Supabase key boundaries
+
+Distinguish publishable keys (`sb_publishable_...`) and legacy `anon` keys from secret keys (`sb_secret_...`) and legacy `service_role` keys. Public key presence is not itself a secret leak; inspect effective RLS and authorization. Do not infer a JWT’s privileged role from its header prefix alone, and do not print key/token values in reports. Verify current behavior in [Supabase API key guidance](https://supabase.com/docs/guides/getting-started/api-keys).

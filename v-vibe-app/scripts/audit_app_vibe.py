@@ -14,6 +14,7 @@ import json
 import os
 import re
 import sys
+import subprocess
 from pathlib import Path
 
 IGNORE_DIRS = {
@@ -70,13 +71,26 @@ def check_secrets_and_env(repo_path: Path):
         "hardcoded_secrets": [],
         "env_example_found": False,
         "env_files_in_git": [],
+        "local_env_files": [],
+        "git_tracking_verified": False,
     }
+    tracked_files = set()
+    try:
+        tracked = subprocess.run(
+            ["git", "-C", str(repo_path), "ls-files", "-z", "--", "."],
+            capture_output=True, check=True,
+        )
+        tracked_files = set(tracked.stdout.decode("utf-8", errors="surrogateescape").split("\0"))
+        results["git_tracking_verified"] = True
+    except (OSError, subprocess.CalledProcessError):
+        pass
 
     secret_patterns = [
+        ("Supabase Secret Key", re.compile(r'sb_secret_[0-9A-Za-z_-]{16,}')),
         ("Stripe Secret Key", re.compile(r'sk_live_[0-9a-zA-Z]{24,}')),
         ("AWS Access Key", re.compile(r'AKIA[0-9A-Z]{16}')),
         ("Generic Private Key", re.compile(r'-----BEGIN (?:RSA |EC )?PRIVATE KEY-----')),
-        ("Supabase Service Role", re.compile(r'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.[a-zA-Z0-9_-]{30,}\.[a-zA-Z0-9_-]{30,}')),
+        ("JWT candidate (role unverified)", re.compile(r'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.[a-zA-Z0-9_-]{30,}\.[a-zA-Z0-9_-]{30,}')),
         ("Hardcoded Password in URL", re.compile(r'postgres(?:ql)?:\/\/[^:]+:([^@]+)@')),
     ]
 
@@ -85,7 +99,9 @@ def check_secrets_and_env(repo_path: Path):
         if p.name == ".env.example":
             results["env_example_found"] = True
         if p.name in [".env", ".env.production", ".env.local"] and not p.name.endswith(".example"):
-            results["env_files_in_git"].append(rel)
+            results["local_env_files"].append(rel)
+            if rel in tracked_files:
+                results["env_files_in_git"].append(rel)
 
         if p.suffix.lower() not in APP_SOURCE_SUFFIXES or p.name.startswith(".env"):
             continue
@@ -97,15 +113,13 @@ def check_secrets_and_env(repo_path: Path):
 
         lines = content.splitlines()
         for idx, line in enumerate(lines, 1):
-            if any(term in line.lower() for term in ["dummy", "mock", "test", "example", "placeholder"]):
-                continue
             for name, pattern in secret_patterns:
                 if pattern.search(line):
                     results["hardcoded_secrets"].append({
                         "file": rel,
                         "line": idx,
                         "type": name,
-                        "preview": line.strip()[:80]
+                        "preview": "[REDACTED]"
                     })
                     break
 
@@ -161,22 +175,21 @@ def check_database_hygiene(repo_path: Path):
         "rls_enabled": False,
     }
 
-    # Check migration directories
-    if list(repo_path.glob("**/prisma/schema.prisma")):
-        results["has_migrations"] = True
-        results["migration_framework"] = "Prisma"
-    elif list(repo_path.glob("**/supabase/migrations/*.sql")):
-        results["has_migrations"] = True
-        results["migration_framework"] = "Supabase"
-    elif list(repo_path.glob("**/drizzle/*.ts")) or list(repo_path.glob("**/drizzle.config.*")):
-        results["has_migrations"] = True
-        results["migration_framework"] = "Drizzle"
-    elif list(repo_path.glob("**/alembic/versions/*.py")) or list(repo_path.glob("**/alembic.ini")):
-        results["has_migrations"] = True
-        results["migration_framework"] = "Alembic"
-    elif list(repo_path.glob("**/migrations/*.py")):
-        results["has_migrations"] = True
-        results["migration_framework"] = "Django"
+    # Use the pruned inventory; vendor packages are not project migration evidence.
+    files = list(walk_files(repo_path))
+    relative = [p.relative_to(repo_path) for p in files]
+    checks = [
+        ("Prisma", lambda p: p.name == "schema.prisma" and p.parent.name == "prisma"),
+        ("Supabase", lambda p: p.suffix == ".sql" and p.parent.name == "migrations" and "supabase" in p.parts),
+        ("Drizzle", lambda p: p.name.startswith("drizzle.config.") or p.parent.name == "drizzle" and p.suffix == ".ts"),
+        ("Alembic", lambda p: p.name == "alembic.ini" or p.parent.name == "versions" and "alembic" in p.parts and p.suffix == ".py"),
+        ("Django", lambda p: p.parent.name == "migrations" and p.suffix == ".py"),
+    ]
+    for framework, matches in checks:
+        if any(matches(p) for p in relative):
+            results["has_migrations"] = True
+            results["migration_framework"] = framework
+            break
 
     float_money_pat = re.compile(r'(price|amount|balance|fee|cost|total|salary)\s*:\s*(?:number|float|Double|Float)', re.IGNORECASE)
     pg_float_money = re.compile(r'(price|amount|balance|fee|cost|total)\s+(?:FLOAT|REAL|DOUBLE PRECISION)', re.IGNORECASE)
@@ -352,8 +365,8 @@ def main():
     args = parse_args()
     repo_path = Path(args.repo).resolve()
 
-    if not repo_path.exists():
-        print(f"Error: path does not exist: {repo_path}", file=sys.stderr)
+    if not repo_path.is_dir():
+        print(f"Error: not a repository directory: {repo_path}", file=sys.stderr)
         sys.exit(1)
 
     secrets = check_secrets_and_env(repo_path)
@@ -363,6 +376,7 @@ def main():
     slop_report = check_codebase_and_design_slop(repo_path)
 
     full_report = {
+        "evidence_scope": "Static source candidates; runtime enforcement and deployment remain unverified",
         "repo": str(repo_path),
         "secrets": secrets,
         "distributed_systems": dist_systems,
@@ -375,6 +389,7 @@ def main():
         print(json.dumps(full_report, indent=2))
         return
 
+    print("Static source candidates only; unmatched patterns do not prove safety or absence.")
     print("=" * 70)
     print("V-VIBE-APP: FULL-STACK SAAS & BACKEND PRODUCTION AUDIT")
     print("=" * 70)
@@ -387,7 +402,7 @@ def main():
     else:
         print("  - Hardcoded secrets: NONE DETECTED (Pass)")
     if secrets["env_files_in_git"]:
-        print(f"  - [WARNING] Live .env files in git tree: {', '.join(secrets['env_files_in_git'])}")
+        print(f"  - [WARNING] Git-tracked live .env files: {', '.join(secrets['env_files_in_git'])}")
     print(f"  - .env.example present: {'YES' if secrets['env_example_found'] else 'NO (Missing template)'}")
 
     print("\n2. Distributed Systems Pillars (The 19 Architectures):")
@@ -400,13 +415,13 @@ def main():
     print(f"  - Database Migrations: {'YES (' + str(db['migration_framework']) + ')' if db['has_migrations'] else 'NO (Ad-hoc database risk)'}")
     print(f"  - Connection Pooling (PgBouncer/Pool): {'CONFIGURED' if db['has_connection_pooling'] else 'UNVERIFIED (Traffic spike exhaustion risk)'}")
     print(f"  - Soft Delete Pattern: {'DETECTED' if db['soft_delete_support'] else 'NO (Accidental deletion risk)'}")
-    print(f"  - Row Level Security (RLS): {'ENABLED' if db['rls_enabled'] else 'NOT FOUND'}")
+    print(f"  - Row Level Security (RLS): {'PATTERN FOUND; active policies UNVERIFIED' if db['rls_enabled'] else 'NO PATTERN FOUND; UNVERIFIED'}")
     if db["float_money_fields"]:
-        print(f"  - [CRITICAL] Floating-point currency detected ({len(db['float_money_fields'])} instances):")
+        print(f"  - [REVIEW] Money-field type candidates (trace units, storage, and math) ({len(db['float_money_fields'])} instances):")
         for f in db["float_money_fields"][:3]:
             print(f"    * {f['file']}:{f['line']} -> {f['text']}")
     else:
-        print("  - Integer/Decimal Money: PASS (No naive float money fields found)")
+        print("  - Money-field scan: No configured type pattern found; arithmetic UNVERIFIED")
 
     print("\n4. Enterprise Auth & Multi-Tenancy:")
     print(f"  - Multi-Tenant Isolation (tenant_id): {'FOUND' if auth_sec['tenant_id_found'] else 'WARNING: Missing explicit tenant scoping'}")
@@ -414,7 +429,7 @@ def main():
     print(f"  - MFA / 2FA Support: {'DETECTED' if auth_sec['mfa_references'] else 'NOT FOUND'}")
     print(f"  - SSO / SAML Enterprise Auth: {'DETECTED' if auth_sec['sso_saml_references'] else 'NOT FOUND'}")
     print(f"  - SCIM User Provisioning: {'DETECTED' if auth_sec['scim_references'] else 'NOT FOUND'}")
-    print(f"  - Webhook Signature Verification: {'PASS' if auth_sec['webhook_signature_verified'] else 'FAIL (Unverified webhook caller)'}")
+    print(f"  - Webhook Signature Verification: {'PATTERN FOUND; caller validation UNVERIFIED' if auth_sec['webhook_signature_verified'] else 'NO PATTERN FOUND; caller validation UNVERIFIED'}")
     print(f"  - Sentry / Error Monitoring: {'CONFIGURED' if auth_sec['error_tracking_found'] else 'MISSING (Blind to production crashes)'}")
     if auth_sec["leaking_stack_traces"]:
         print(f"  - [WARNING] Possible stack trace leakage to client: {', '.join(auth_sec['leaking_stack_traces'][:3])}")

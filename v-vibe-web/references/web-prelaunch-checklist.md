@@ -1,5 +1,7 @@
 # Website & Marketing Launch Readiness Checklist
 
+Apply the entrypoint’s scope, evidence, frequency x impact scoring, threshold (5), and deferral policy. These checks and severity examples guide inspection; they do not prove a bug or require a new feature. Mark inapplicable checks N/A and unavailable evidence UNVERIFIED. Below-threshold issues do not block completion; review-only requests remain read-only.
+
 Pre-launch verification checklist for public-facing websites, marketing pages, and content sites before driving traffic or launching on Product Hunt / Hacker News.
 
 ---
