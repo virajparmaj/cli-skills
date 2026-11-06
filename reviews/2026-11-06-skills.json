@@ -1,0 +1,1855 @@
+{
+  "date": "2026-11-06",
+  "scope": "Deeper second pass over all 44 existing repository skills; preserves earlier improvements and staging",
+  "fix_threshold": 5,
+  "skills": [
+    {
+      "name": "v-auth",
+      "entrypoint": "v-auth/SKILL.md",
+      "status": "Improved",
+      "outcome": "Updated API-key guidance for publishable/secret keys and legacy JWT role verification; reports must redact credentials.",
+      "resources_considered": [
+        "v-auth/SKILL.md",
+        "v-auth/references/auth-audit-spec.md",
+        "v-auth/scripts/discover-auth-surface.sh"
+      ],
+      "changed_files": [
+        "v-auth/references/auth-audit-spec.md"
+      ],
+      "finding_ids": [
+        "R06"
+      ]
+    },
+    {
+      "name": "v-backtest-audit",
+      "entrypoint": "v-backtest-audit/SKILL.md",
+      "status": "Improved",
+      "outcome": "Pruned excluded trees before descent; notebook source boundaries and parse coverage are explicit; source counts and metric units remain evidence leads.",
+      "resources_considered": [
+        "v-backtest-audit/SKILL.md",
+        "v-backtest-audit/references/audit-playbook.md",
+        "v-backtest-audit/references/deflated-sharpe.md",
+        "v-backtest-audit/scripts/scan-leakage.py",
+        "v-backtest-audit/scripts/signal-inventory.py",
+        "v-backtest-audit/tests/test_scan_boundaries.py",
+        "v-backtest-audit/tests/test_sharpe_threshold_units.py"
+      ],
+      "changed_files": [
+        "v-backtest-audit/scripts/scan-leakage.py",
+        "v-backtest-audit/scripts/signal-inventory.py",
+        "v-backtest-audit/tests/test_scan_boundaries.py"
+      ],
+      "finding_ids": [
+        "R01"
+      ]
+    },
+    {
+      "name": "v-backtest-report",
+      "entrypoint": "v-backtest-report/SKILL.md",
+      "status": "Improved",
+      "outcome": "Unified percent-return parsing between loaders and rejected missing observations rather than silently dropping rows.",
+      "resources_considered": [
+        "v-backtest-report/SKILL.md",
+        "v-backtest-report/references/metrics-glossary.md",
+        "v-backtest-report/references/report-template.md",
+        "v-backtest-report/scripts/compute-metrics.py",
+        "v-backtest-report/tests/test_metric_known_answers.py"
+      ],
+      "changed_files": [
+        "v-backtest-report/scripts/compute-metrics.py",
+        "v-backtest-report/tests/test_metric_known_answers.py"
+      ],
+      "finding_ids": [
+        "R11"
+      ]
+    },
+    {
+      "name": "v-baselines",
+      "entrypoint": "v-baselines/SKILL.md",
+      "status": "Improved",
+      "outcome": "Added explicit task and temporal-gap controls; made fold-spread comparisons descriptive; preserved fold-local preprocessing.",
+      "resources_considered": [
+        "v-baselines/SKILL.md",
+        "v-baselines/references/baselines-playbook.md",
+        "v-baselines/scripts/run-baselines.py",
+        "v-baselines/tests/test_baseline_protocol.py"
+      ],
+      "changed_files": [
+        "v-baselines/SKILL.md",
+        "v-baselines/references/baselines-playbook.md",
+        "v-baselines/scripts/run-baselines.py",
+        "v-baselines/tests/test_baseline_protocol.py"
+      ],
+      "finding_ids": [
+        "R12",
+        "R13"
+      ]
+    },
+    {
+      "name": "v-chrome-extension",
+      "entrypoint": "v-chrome-extension/SKILL.md",
+      "status": "Improved",
+      "outcome": "Fixed noninteractive ripgrep scans reading empty stdin; scan explicit project paths and report secret locations without values.",
+      "resources_considered": [
+        "v-chrome-extension/SKILL.md",
+        "v-chrome-extension/references/chrome-extension-pre-release-audit-spec.md",
+        "v-chrome-extension/scripts/discover-extension-surface.sh",
+        "v-chrome-extension/tests/test_discovery.py"
+      ],
+      "changed_files": [
+        "v-chrome-extension/scripts/discover-extension-surface.sh",
+        "v-chrome-extension/tests/test_discovery.py"
+      ],
+      "finding_ids": [
+        "R03",
+        "R05"
+      ]
+    },
+    {
+      "name": "v-dataset",
+      "entrypoint": "v-dataset/SKILL.md",
+      "status": "Improved",
+      "outcome": "Made overlap hashes schema-aware and column-order independent; replaced per-row Series construction with tuple iteration.",
+      "resources_considered": [
+        "v-dataset/SKILL.md",
+        "v-dataset/references/dataset-playbook.md",
+        "v-dataset/scripts/find-silent-drops.py",
+        "v-dataset/scripts/funding-grid-check.py",
+        "v-dataset/scripts/profile-dataset.py",
+        "v-dataset/tests/test_split_overlap.py"
+      ],
+      "changed_files": [
+        "v-dataset/scripts/profile-dataset.py",
+        "v-dataset/tests/test_split_overlap.py"
+      ],
+      "finding_ids": [
+        "R14"
+      ]
+    },
+    {
+      "name": "v-declutter",
+      "entrypoint": "v-declutter/SKILL.md",
+      "status": "Improved",
+      "outcome": "Corrected consolidated-skill routing in the Lovable removal playbook; retained scoped rollback behavior.",
+      "resources_considered": [
+        "v-declutter/SKILL.md",
+        "v-declutter/references/declutter-playbook.md",
+        "v-declutter/references/lovable-removal-playbook.md",
+        "v-declutter/scripts/find-lovable-traces.sh",
+        "v-declutter/scripts/scan_declutter.py"
+      ],
+      "changed_files": [
+        "v-declutter/references/lovable-removal-playbook.md"
+      ],
+      "finding_ids": []
+    },
+    {
+      "name": "v-duckdb-layer",
+      "entrypoint": "v-duckdb-layer/SKILL.md",
+      "status": "Improved",
+      "outcome": "Pruned excluded trees and report unavailable schemas as unverified instead of claiming a match.",
+      "resources_considered": [
+        "v-duckdb-layer/SKILL.md",
+        "v-duckdb-layer/references/audit-playbook.md",
+        "v-duckdb-layer/scripts/parquet-facts.py",
+        "v-duckdb-layer/tests/test_schema_coverage.py"
+      ],
+      "changed_files": [
+        "v-duckdb-layer/scripts/parquet-facts.py",
+        "v-duckdb-layer/tests/test_schema_coverage.py"
+      ],
+      "finding_ids": [
+        "R01",
+        "R15"
+      ]
+    },
+    {
+      "name": "v-frontend",
+      "entrypoint": "v-frontend/SKILL.md",
+      "status": "Reviewed; retained",
+      "outcome": "Retained: focused rubric, runtime-measurement boundaries, required evidence, and existing helper behavior fit the requested scope.",
+      "resources_considered": [
+        "v-frontend/SKILL.md",
+        "v-frontend/references/audit-rubric.md",
+        "v-frontend/references/workspace-patterns.md",
+        "v-frontend/scripts/probe_repo.sh"
+      ],
+      "changed_files": [],
+      "finding_ids": []
+    },
+    {
+      "name": "v-git",
+      "entrypoint": "v-git/SKILL.md",
+      "status": "Reviewed; retained",
+      "outcome": "Retained: intended staging, human identity, verified push remote, personal main/contribution exceptions, and draft-only boundaries are already covered.",
+      "resources_considered": [
+        "v-git/SKILL.md",
+        "v-git/references/commit-rules.md",
+        "v-git/scripts/summarize-git-changes.sh"
+      ],
+      "changed_files": [],
+      "finding_ids": []
+    },
+    {
+      "name": "v-git-multi",
+      "entrypoint": "v-git-multi/SKILL.md",
+      "status": "Improved",
+      "outcome": "Replaced line-oriented/per-file subprocess inventory with NUL-aware Git reads and JSON-quoted filenames; stream large untracked files.",
+      "resources_considered": [
+        "v-git-multi/SKILL.md",
+        "v-git-multi/references/multi-commit-rules.md",
+        "v-git-multi/scripts/cluster-git-changes.py",
+        "v-git-multi/scripts/cluster-git-changes.sh",
+        "v-git-multi/tests/test_git_manifest.py"
+      ],
+      "changed_files": [
+        "v-git-multi/scripts/cluster-git-changes.py",
+        "v-git-multi/scripts/cluster-git-changes.sh",
+        "v-git-multi/tests/test_git_manifest.py"
+      ],
+      "finding_ids": [
+        "R26",
+        "R27"
+      ]
+    },
+    {
+      "name": "v-metric-math",
+      "entrypoint": "v-metric-math/SKILL.md",
+      "status": "Improved",
+      "outcome": "Generated tests now execute resolved metric functions; cache imports, support dataclass modules, preserve existing test files unless explicitly overwritten.",
+      "resources_considered": [
+        "v-metric-math/SKILL.md",
+        "v-metric-math/references/audit-playbook.md",
+        "v-metric-math/references/benchmarks.json",
+        "v-metric-math/scripts/discover-metric-surface.sh",
+        "v-metric-math/scripts/run-metric-benchmarks.py",
+        "v-metric-math/tests/test_executable_benchmarks.py",
+        "v-metric-math/tests/test_fixture_answers.py"
+      ],
+      "changed_files": [
+        "v-metric-math/SKILL.md",
+        "v-metric-math/references/audit-playbook.md",
+        "v-metric-math/scripts/run-metric-benchmarks.py",
+        "v-metric-math/tests/test_executable_benchmarks.py"
+      ],
+      "finding_ids": [
+        "R16"
+      ]
+    },
+    {
+      "name": "v-ml",
+      "entrypoint": "v-ml/SKILL.md",
+      "status": "Improved",
+      "outcome": "Recognize backend layouts such as app/ and api/; refresh artifact-loading guidance to distinguish trustworthy formats and code-execution risks.",
+      "resources_considered": [
+        "v-ml/SKILL.md",
+        "v-ml/references/audit-playbook.md",
+        "v-ml/references/audit-spec.md",
+        "v-ml/references/workspace-patterns.md",
+        "v-ml/scripts/map_ml_repo.py",
+        "v-ml/tests/test_backend_discovery.py"
+      ],
+      "changed_files": [
+        "v-ml/references/audit-playbook.md",
+        "v-ml/references/audit-spec.md",
+        "v-ml/scripts/map_ml_repo.py",
+        "v-ml/tests/test_backend_discovery.py"
+      ],
+      "finding_ids": [
+        "R22"
+      ]
+    },
+    {
+      "name": "v-notebook",
+      "entrypoint": "v-notebook/SKILL.md",
+      "status": "Improved",
+      "outcome": "Find promoted functions inside modules, measure UTF-8 output bytes, and replace a truncating cleanup command with a tested atomic helper.",
+      "resources_considered": [
+        "v-notebook/SKILL.md",
+        "v-notebook/references/notebook-playbook.md",
+        "v-notebook/scripts/scan-notebooks.py",
+        "v-notebook/scripts/strip-outputs.py",
+        "v-notebook/tests/test_promoted_functions.py",
+        "v-notebook/tests/test_strip_outputs.py"
+      ],
+      "changed_files": [
+        "v-notebook/SKILL.md",
+        "v-notebook/references/notebook-playbook.md",
+        "v-notebook/scripts/scan-notebooks.py",
+        "v-notebook/scripts/strip-outputs.py",
+        "v-notebook/tests/test_promoted_functions.py",
+        "v-notebook/tests/test_strip_outputs.py"
+      ],
+      "finding_ids": [
+        "R18",
+        "R19"
+      ]
+    },
+    {
+      "name": "v-notes",
+      "entrypoint": "v-notes/SKILL.md",
+      "status": "Improved",
+      "outcome": "Require ripgrep explicitly so missing tooling is not mistaken for a clean scan; preserve target paths.",
+      "resources_considered": [
+        "v-notes/SKILL.md",
+        "v-notes/references/notes-generation-spec.md",
+        "v-notes/scripts/discover-repo-surface.sh"
+      ],
+      "changed_files": [
+        "v-notes/scripts/discover-repo-surface.sh"
+      ],
+      "finding_ids": [
+        "R02"
+      ]
+    },
+    {
+      "name": "v-notes-update",
+      "entrypoint": "v-notes-update/SKILL.md",
+      "status": "Improved",
+      "outcome": "Removed Bash nameref dependency for native macOS Bash 3.2; consume Git status with NUL delimiters and keep rename paths.",
+      "resources_considered": [
+        "v-notes-update/SKILL.md",
+        "v-notes-update/references/notes-update-spec.md",
+        "v-notes-update/scripts/discover-notes-drift.sh",
+        "v-notes-update/tests/test_macos_discovery.py"
+      ],
+      "changed_files": [
+        "v-notes-update/scripts/discover-notes-drift.sh",
+        "v-notes-update/tests/test_macos_discovery.py"
+      ],
+      "finding_ids": [
+        "R26",
+        "R28"
+      ]
+    },
+    {
+      "name": "v-perf",
+      "entrypoint": "v-perf/SKILL.md",
+      "status": "Improved",
+      "outcome": "Use a pruned file inventory for package discovery, avoiding dependency-tree scanning and vendor false evidence.",
+      "resources_considered": [
+        "v-perf/SKILL.md",
+        "v-perf/references/perf-audit-rubric.md",
+        "v-perf/scripts/audit_perf.py",
+        "v-perf/tests/test_discovery.py"
+      ],
+      "changed_files": [
+        "v-perf/scripts/audit_perf.py",
+        "v-perf/tests/test_discovery.py"
+      ],
+      "finding_ids": [
+        "R01"
+      ]
+    },
+    {
+      "name": "v-phase",
+      "entrypoint": "v-phase/SKILL.md",
+      "status": "Improved",
+      "outcome": "Gather phase evidence in a pruned walk, distinguish exact paths from basename candidates, support spaced/encoded links, and harvest equations efficiently.",
+      "resources_considered": [
+        "v-phase/SKILL.md",
+        "v-phase/references/formula-trace.md",
+        "v-phase/references/phase-contract-playbook.md",
+        "v-phase/scripts/extract-equations.py",
+        "v-phase/scripts/phase-status.py",
+        "v-phase/scripts/phase-status.sh",
+        "v-phase/tests/test_phase_inventory.py"
+      ],
+      "changed_files": [
+        "v-phase/scripts/extract-equations.py",
+        "v-phase/scripts/phase-status.py",
+        "v-phase/scripts/phase-status.sh",
+        "v-phase/tests/test_phase_inventory.py"
+      ],
+      "finding_ids": [
+        "R01",
+        "R29"
+      ]
+    },
+    {
+      "name": "v-post-launch",
+      "entrypoint": "v-post-launch/SKILL.md",
+      "status": "Improved",
+      "outcome": "Handle crawler-specific rules and Allow precedence, inspect modern metadata files, and disclose static-source coverage limits.",
+      "resources_considered": [
+        "v-post-launch/SKILL.md",
+        "v-post-launch/references/post-launch-playbook.md",
+        "v-post-launch/scripts/audit_post_launch.py",
+        "v-post-launch/tests/test_audit_post_launch.py",
+        "v-post-launch/tests/test_discovery.py"
+      ],
+      "changed_files": [
+        "v-post-launch/references/post-launch-playbook.md",
+        "v-post-launch/scripts/audit_post_launch.py",
+        "v-post-launch/tests/test_discovery.py"
+      ],
+      "finding_ids": [
+        "R08",
+        "R09"
+      ]
+    },
+    {
+      "name": "v-provenance",
+      "entrypoint": "v-provenance/SKILL.md",
+      "status": "Improved",
+      "outcome": "Produce clean JSON, verify hashes without profiling, fail on missing/stale cards, preserve human cards, and distinguish graph endpoints from provenance references.",
+      "resources_considered": [
+        "v-provenance/SKILL.md",
+        "v-provenance/references/provenance-playbook.md",
+        "v-provenance/scripts/inventory-datasets.py",
+        "v-provenance/scripts/sample-edge-provenance.py",
+        "v-provenance/tests/test_provenance_modes.py"
+      ],
+      "changed_files": [
+        "v-provenance/scripts/inventory-datasets.py",
+        "v-provenance/scripts/sample-edge-provenance.py",
+        "v-provenance/tests/test_provenance_modes.py"
+      ],
+      "finding_ids": [
+        "R20",
+        "R21"
+      ]
+    },
+    {
+      "name": "v-readme",
+      "entrypoint": "v-readme/SKILL.md",
+      "status": "Improved",
+      "outcome": "Require discovery tooling, detect Next.js before generic React, and avoid treating an empty/missing scan as verified product evidence.",
+      "resources_considered": [
+        "v-readme/SKILL.md",
+        "v-readme/references/readme-app-spec.md",
+        "v-readme/references/readme-web-spec.md",
+        "v-readme/references/screenshot-capture-guide.md",
+        "v-readme/scripts/detect-app-type.sh",
+        "v-readme/scripts/discover-app-readme-surface.sh",
+        "v-readme/scripts/discover-web-readme-surface.sh"
+      ],
+      "changed_files": [
+        "v-readme/scripts/detect-app-type.sh",
+        "v-readme/scripts/discover-app-readme-surface.sh",
+        "v-readme/scripts/discover-web-readme-surface.sh"
+      ],
+      "finding_ids": [
+        "R02",
+        "R30"
+      ]
+    },
+    {
+      "name": "v-regression-diagnostics",
+      "entrypoint": "v-regression-diagnostics/SKILL.md",
+      "status": "Improved",
+      "outcome": "Resolve aliased model fits and covariance options in the fit-call inventory rather than missing ordinary usage.",
+      "resources_considered": [
+        "v-regression-diagnostics/SKILL.md",
+        "v-regression-diagnostics/references/diagnostics-playbook.md",
+        "v-regression-diagnostics/scripts/inventory-model-fits.py",
+        "v-regression-diagnostics/tests/test_call_inventory.py"
+      ],
+      "changed_files": [
+        "v-regression-diagnostics/scripts/inventory-model-fits.py",
+        "v-regression-diagnostics/tests/test_call_inventory.py"
+      ],
+      "finding_ids": [
+        "R23"
+      ]
+    },
+    {
+      "name": "v-run-ledger",
+      "entrypoint": "v-run-ledger/SKILL.md",
+      "status": "Improved",
+      "outcome": "Validate parameters/finite metrics before mutation, resolve data relative to the target repo, and refuse incompatible ledger schemas.",
+      "resources_considered": [
+        "v-run-ledger/SKILL.md",
+        "v-run-ledger/references/ledger-playbook.md",
+        "v-run-ledger/scripts/log-run.py",
+        "v-run-ledger/tests/test_ledger_integrity.py"
+      ],
+      "changed_files": [
+        "v-run-ledger/scripts/log-run.py",
+        "v-run-ledger/tests/test_ledger_integrity.py"
+      ],
+      "finding_ids": [
+        "R24"
+      ]
+    },
+    {
+      "name": "v-scaffold",
+      "entrypoint": "v-scaffold/SKILL.md",
+      "status": "Improved",
+      "outcome": "Complete runtime/lint/test dependencies, validate package names, protect existing files, use supported Vite 7.3, and use Supabase publishable keys in new clients.",
+      "resources_considered": [
+        "v-scaffold/SKILL.md",
+        "v-scaffold/references/conventions.md",
+        "v-scaffold/scripts/scaffold-py.sh",
+        "v-scaffold/scripts/scaffold-web.sh",
+        "v-scaffold/tests/test_generated_projects.py"
+      ],
+      "changed_files": [
+        "v-scaffold/references/conventions.md",
+        "v-scaffold/scripts/scaffold-py.sh",
+        "v-scaffold/scripts/scaffold-web.sh",
+        "v-scaffold/tests/test_generated_projects.py"
+      ],
+      "finding_ids": [
+        "R06",
+        "R31",
+        "R32"
+      ]
+    },
+    {
+      "name": "v-scripts",
+      "entrypoint": "v-scripts/SKILL.md",
+      "status": "Improved",
+      "outcome": "Corrected escaped ripgrep expressions so polling and I/O hotspots are actually discovered.",
+      "resources_considered": [
+        "v-scripts/SKILL.md",
+        "v-scripts/references/audit-playbook.md",
+        "v-scripts/scripts/surface-map.sh",
+        "v-scripts/tests/test_discovery.py"
+      ],
+      "changed_files": [
+        "v-scripts/scripts/surface-map.sh",
+        "v-scripts/tests/test_discovery.py"
+      ],
+      "finding_ids": [
+        "R04"
+      ]
+    },
+    {
+      "name": "v-security",
+      "entrypoint": "v-security/SKILL.md",
+      "status": "Improved",
+      "outcome": "Require discovery tooling; refresh Supabase credential handling and credentialed CORS examples with current official guidance.",
+      "resources_considered": [
+        "v-security/SKILL.md",
+        "v-security/agents/openai.yaml",
+        "v-security/references/audit-playbook.md",
+        "v-security/references/variants.md",
+        "v-security/references/workspace-patterns.md",
+        "v-security/scripts/surface-map.sh"
+      ],
+      "changed_files": [
+        "v-security/references/workspace-patterns.md",
+        "v-security/scripts/surface-map.sh"
+      ],
+      "finding_ids": [
+        "R02",
+        "R06"
+      ]
+    },
+    {
+      "name": "v-shots",
+      "entrypoint": "v-shots/SKILL.md",
+      "status": "Improved",
+      "outcome": "Parse static nested routes/guards/basenames with project TypeScript, keep unresolved candidates unverified, and use visible-content readiness instead of network-idle waits.",
+      "resources_considered": [
+        "v-shots/SKILL.md",
+        "v-shots/references/capture-playbook.md",
+        "v-shots/references/readme-wiring.md",
+        "v-shots/scripts/capture-routes.mjs",
+        "v-shots/scripts/list-routes.mjs",
+        "v-shots/scripts/route-ast.mjs",
+        "v-shots/tests/test_route_candidates.py"
+      ],
+      "changed_files": [
+        "v-shots/SKILL.md",
+        "v-shots/references/capture-playbook.md",
+        "v-shots/scripts/capture-routes.mjs",
+        "v-shots/scripts/list-routes.mjs",
+        "v-shots/scripts/route-ast.mjs",
+        "v-shots/tests/test_route_candidates.py"
+      ],
+      "finding_ids": [
+        "R33",
+        "R34",
+        "R35"
+      ]
+    },
+    {
+      "name": "v-supa-migrate",
+      "entrypoint": "v-supa-migrate/SKILL.md",
+      "status": "Reviewed; retained",
+      "outcome": "Retained: drafting boundary, migration history checks, generated-types precedence, explicit RLS, and protected client initializer already fit the workflow.",
+      "resources_considered": [
+        "v-supa-migrate/SKILL.md",
+        "v-supa-migrate/references/migration-template.md",
+        "v-supa-migrate/references/type-sync.md",
+        "v-supa-migrate/scripts/next-migration.sh"
+      ],
+      "changed_files": [],
+      "finding_ids": []
+    },
+    {
+      "name": "v-test",
+      "entrypoint": "v-test/SKILL.md",
+      "status": "Reviewed; retained",
+      "outcome": "Retained: four selectable modes, review-only boundaries, real reproductions, score/deferral rules, and coverage limits already fit the workflow.",
+      "resources_considered": [
+        "v-test/SKILL.md",
+        "v-test/references/error-handling-fallback-test-spec.md",
+        "v-test/references/functional-testing-checklist.md",
+        "v-test/references/input-edge-checklist.md",
+        "v-test/references/system-reliability-checklist.md",
+        "v-test/scripts/discover-error-surface.sh"
+      ],
+      "changed_files": [],
+      "finding_ids": []
+    },
+    {
+      "name": "v-timeseries-leakage",
+      "entrypoint": "v-timeseries-leakage/SKILL.md",
+      "status": "Improved",
+      "outcome": "Analyze notebook cells as one pipeline with cell locations; detect keyword negative shifts and report parse failures without inventing clean coverage.",
+      "resources_considered": [
+        "v-timeseries-leakage/SKILL.md",
+        "v-timeseries-leakage/references/leakage-playbook.md",
+        "v-timeseries-leakage/scripts/find-split-leakage.py",
+        "v-timeseries-leakage/tests/test_notebook_pipeline.py"
+      ],
+      "changed_files": [
+        "v-timeseries-leakage/scripts/find-split-leakage.py",
+        "v-timeseries-leakage/tests/test_notebook_pipeline.py"
+      ],
+      "finding_ids": [
+        "R17"
+      ]
+    },
+    {
+      "name": "v-triage",
+      "entrypoint": "v-triage/SKILL.md",
+      "status": "Improved",
+      "outcome": "Fail explicitly when required discovery tooling is unavailable; preserve the smallest-fix and actual-reproduction contract.",
+      "resources_considered": [
+        "v-triage/SKILL.md",
+        "v-triage/references/error-families.md",
+        "v-triage/references/triage-protocol.md",
+        "v-triage/scripts/locate-error.sh"
+      ],
+      "changed_files": [
+        "v-triage/scripts/locate-error.sh"
+      ],
+      "finding_ids": [
+        "R02"
+      ]
+    },
+    {
+      "name": "v-ui",
+      "entrypoint": "v-ui/SKILL.md",
+      "status": "Reviewed; retained",
+      "outcome": "Retained: selective routing preserves project stack, tokens, working controls, and illustration boundaries; no extra modules are loaded by default.",
+      "resources_considered": [
+        "v-ui/SKILL.md",
+        "v-ui/agents/openai.yaml"
+      ],
+      "changed_files": [],
+      "finding_ids": []
+    },
+    {
+      "name": "boardui",
+      "entrypoint": "v-ui/boardui/SKILL.md",
+      "status": "Reviewed; retained",
+      "outcome": "Retained: current bundled catalog and compatibility checks preserve the selected React/Tailwind system and custom files; verify upstream details when used.",
+      "resources_considered": [
+        "v-ui/boardui/SKILL.md",
+        "v-ui/boardui/references/components.md",
+        "v-ui/boardui/references/motion.md",
+        "v-ui/boardui/references/patterns.md",
+        "v-ui/boardui/references/theming.md"
+      ],
+      "changed_files": [],
+      "finding_ids": []
+    },
+    {
+      "name": "component-gallery",
+      "entrypoint": "v-ui/component-gallery/SKILL.md",
+      "status": "Reviewed; retained",
+      "outcome": "Retained: original-source/API verification, compatible component selection, licensing, and bounded discovery are already explicit.",
+      "resources_considered": [
+        "v-ui/component-gallery/SKILL.md"
+      ],
+      "changed_files": [],
+      "finding_ids": []
+    },
+    {
+      "name": "easyui-components",
+      "entrypoint": "v-ui/easyui-components/SKILL.md",
+      "status": "Reviewed; retained",
+      "outcome": "Retained: current-page verification and local fallback prevent invented exports or forced library adoption.",
+      "resources_considered": [
+        "v-ui/easyui-components/SKILL.md"
+      ],
+      "changed_files": [],
+      "finding_ids": []
+    },
+    {
+      "name": "good-css",
+      "entrypoint": "v-ui/good-css/SKILL.md",
+      "status": "Reviewed; retained",
+      "outcome": "Retained: browser-support checks, design tokens, scroll semantics, focus, and reduced-motion boundaries are already explicit.",
+      "resources_considered": [
+        "v-ui/good-css/SKILL.md",
+        "v-ui/good-css/references/foundations.md",
+        "v-ui/good-css/references/interaction.md",
+        "v-ui/good-css/references/layout.md",
+        "v-ui/good-css/references/motion.md",
+        "v-ui/good-css/references/scroll-and-viewport.md",
+        "v-ui/good-css/references/show-and-hide.md",
+        "v-ui/good-css/references/spacing-and-shape.md",
+        "v-ui/good-css/references/text-and-media.md"
+      ],
+      "changed_files": [],
+      "finding_ids": []
+    },
+    {
+      "name": "stageshow",
+      "entrypoint": "v-ui/stageshow/SKILL.md",
+      "status": "Reviewed; retained",
+      "outcome": "Retained: upstream composition/rehearsal workflow and complete source kit; no concrete current failure justified editing its implementation.",
+      "resources_considered": [
+        "v-ui/stageshow/LICENSE",
+        "v-ui/stageshow/NOTICE.md",
+        "v-ui/stageshow/README.md",
+        "v-ui/stageshow/SKILL.md",
+        "v-ui/stageshow/assets/app-icons.ts",
+        "v-ui/stageshow/examples/ai-cards/cards.css",
+        "v-ui/stageshow/examples/ai-cards/index.tsx",
+        "v-ui/stageshow/examples/ai-chat/chat.css",
+        "v-ui/stageshow/examples/ai-chat/index.tsx",
+        "v-ui/stageshow/examples/annotations/annotations.css",
+        "v-ui/stageshow/examples/annotations/composed.css",
+        "v-ui/stageshow/examples/annotations/composed.tsx",
+        "v-ui/stageshow/examples/annotations/index.tsx",
+        "v-ui/stageshow/examples/backgrounds/backgrounds.css",
+        "v-ui/stageshow/examples/backgrounds/index.tsx",
+        "v-ui/stageshow/examples/bento/bento.css",
+        "v-ui/stageshow/examples/bento/index.tsx",
+        "v-ui/stageshow/examples/brand-marks/brands.css",
+        "v-ui/stageshow/examples/brand-marks/index.tsx",
+        "v-ui/stageshow/examples/calendar/calendar.css",
+        "v-ui/stageshow/examples/calendar/index.tsx",
+        "v-ui/stageshow/examples/chart-scrub/index.tsx",
+        "v-ui/stageshow/examples/chart-scrub/scrub.css",
+        "v-ui/stageshow/examples/choreography/choreography.css",
+        "v-ui/stageshow/examples/choreography/index.tsx",
+        "v-ui/stageshow/examples/chrome/chrome.css",
+        "v-ui/stageshow/examples/chrome/index.tsx",
+        "v-ui/stageshow/examples/close-up/close.css",
+        "v-ui/stageshow/examples/close-up/index.tsx",
+        "v-ui/stageshow/examples/controls/controls.css",
+        "v-ui/stageshow/examples/controls/index.tsx",
+        "v-ui/stageshow/examples/corner-chip/chip.css",
+        "v-ui/stageshow/examples/corner-chip/index.tsx",
+        "v-ui/stageshow/examples/cursor-morph/README.md",
+        "v-ui/stageshow/examples/cursor-morph/cursor-morph.css",
+        "v-ui/stageshow/examples/cursor-morph/cursor-morph.tsx",
+        "v-ui/stageshow/examples/cursor-morph/index.tsx",
+        "v-ui/stageshow/examples/cursor-resize/cursor-resize.css",
+        "v-ui/stageshow/examples/cursor-resize/index.tsx",
+        "v-ui/stageshow/examples/cursors/cursors.css",
+        "v-ui/stageshow/examples/cursors/index.tsx",
+        "v-ui/stageshow/examples/dark-bento/bento.css",
+        "v-ui/stageshow/examples/dark-bento/index.tsx",
+        "v-ui/stageshow/examples/dark-hero/hero.css",
+        "v-ui/stageshow/examples/dark-hero/index.tsx",
+        "v-ui/stageshow/examples/device-pair/index.tsx",
+        "v-ui/stageshow/examples/device-pair/payments.css",
+        "v-ui/stageshow/examples/dynamic-island/index.tsx",
+        "v-ui/stageshow/examples/dynamic-island/island.css",
+        "v-ui/stageshow/examples/excel/excel.css",
+        "v-ui/stageshow/examples/excel/index.tsx",
+        "v-ui/stageshow/examples/fade-crop/fade.css",
+        "v-ui/stageshow/examples/fade-crop/index.tsx",
+        "v-ui/stageshow/examples/figma/figma.css",
+        "v-ui/stageshow/examples/figma/index.tsx",
+        "v-ui/stageshow/examples/finder/finder.css",
+        "v-ui/stageshow/examples/finder/index.tsx",
+        "v-ui/stageshow/examples/finder-glass/finder-glass.css",
+        "v-ui/stageshow/examples/finder-glass/index.tsx",
+        "v-ui/stageshow/examples/form-error/form.css",
+        "v-ui/stageshow/examples/form-error/index.tsx",
+        "v-ui/stageshow/examples/freeform-drag/drag.css",
+        "v-ui/stageshow/examples/freeform-drag/index.tsx",
+        "v-ui/stageshow/examples/glass/glass.css",
+        "v-ui/stageshow/examples/glass/index.tsx",
+        "v-ui/stageshow/examples/gmail/gmail.css",
+        "v-ui/stageshow/examples/gmail/index.tsx",
+        "v-ui/stageshow/examples/google-calendar/gcal.css",
+        "v-ui/stageshow/examples/google-calendar/index.tsx",
+        "v-ui/stageshow/examples/google-docs/docs.css",
+        "v-ui/stageshow/examples/google-docs/index.tsx",
+        "v-ui/stageshow/examples/hero-demo/HeroDemo.tsx",
+        "v-ui/stageshow/examples/hero-demo/hero.css",
+        "v-ui/stageshow/examples/hero-demo/icons.tsx",
+        "v-ui/stageshow/examples/hero-demo/index.tsx",
+        "v-ui/stageshow/examples/hero-grid/grid.css",
+        "v-ui/stageshow/examples/hero-grid/index.tsx",
+        "v-ui/stageshow/examples/imessage/imessage.css",
+        "v-ui/stageshow/examples/imessage/index.tsx",
+        "v-ui/stageshow/examples/kit-extras/extras.css",
+        "v-ui/stageshow/examples/kit-extras/index.tsx",
+        "v-ui/stageshow/examples/linear/index.tsx",
+        "v-ui/stageshow/examples/linear/linear.css",
+        "v-ui/stageshow/examples/loading/index.tsx",
+        "v-ui/stageshow/examples/loading/loading.css",
+        "v-ui/stageshow/examples/looks/index.tsx",
+        "v-ui/stageshow/examples/looks/looks.css",
+        "v-ui/stageshow/examples/looks/radix.css",
+        "v-ui/stageshow/examples/looks/skeuomorphic.css",
+        "v-ui/stageshow/examples/looks/skeuomorphic.tsx",
+        "v-ui/stageshow/examples/looks/studies.css",
+        "v-ui/stageshow/examples/looks/studies.tsx",
+        "v-ui/stageshow/examples/many-of-one/index.tsx",
+        "v-ui/stageshow/examples/many-of-one/many.css",
+        "v-ui/stageshow/examples/messages/index.tsx",
+        "v-ui/stageshow/examples/messages/messages.css",
+        "v-ui/stageshow/examples/monochrome/index.tsx",
+        "v-ui/stageshow/examples/monochrome/mono.css",
+        "v-ui/stageshow/examples/notion/index.tsx",
+        "v-ui/stageshow/examples/notion/notion.css",
+        "v-ui/stageshow/examples/opposite-corners/corners.css",
+        "v-ui/stageshow/examples/opposite-corners/index.tsx",
+        "v-ui/stageshow/examples/overlap/index.tsx",
+        "v-ui/stageshow/examples/overlap/overlap.css",
+        "v-ui/stageshow/examples/panel-annotation/index.tsx",
+        "v-ui/stageshow/examples/panel-annotation/panel.css",
+        "v-ui/stageshow/examples/parts/index.tsx",
+        "v-ui/stageshow/examples/parts/parts.css",
+        "v-ui/stageshow/examples/payout-flow/index.tsx",
+        "v-ui/stageshow/examples/payout-flow/pace.css",
+        "v-ui/stageshow/examples/phone-touch/fitness.css",
+        "v-ui/stageshow/examples/phone-touch/index.tsx",
+        "v-ui/stageshow/examples/phones/index.tsx",
+        "v-ui/stageshow/examples/powerpoint/index.tsx",
+        "v-ui/stageshow/examples/powerpoint/pp.css",
+        "v-ui/stageshow/examples/presence/index.tsx",
+        "v-ui/stageshow/examples/presence/presence.css",
+        "v-ui/stageshow/examples/raycast/index.tsx",
+        "v-ui/stageshow/examples/raycast/raycast.css",
+        "v-ui/stageshow/examples/reorder/index.tsx",
+        "v-ui/stageshow/examples/reorder/reorder.css",
+        "v-ui/stageshow/examples/ruled-bento/grid.css",
+        "v-ui/stageshow/examples/ruled-bento/index.tsx",
+        "v-ui/stageshow/examples/share/index.tsx",
+        "v-ui/stageshow/examples/share/share.css",
+        "v-ui/stageshow/examples/slack/index.tsx",
+        "v-ui/stageshow/examples/slack/slack.css",
+        "v-ui/stageshow/examples/spotify/index.tsx",
+        "v-ui/stageshow/examples/spotify/spotify.css",
+        "v-ui/stageshow/examples/stacked-cards/index.tsx",
+        "v-ui/stageshow/examples/stacked-cards/stacked.css",
+        "v-ui/stageshow/examples/staggered-bento/grid.css",
+        "v-ui/stageshow/examples/staggered-bento/index.tsx",
+        "v-ui/stageshow/examples/static-card/card.css",
+        "v-ui/stageshow/examples/static-card/index.tsx",
+        "v-ui/stageshow/examples/story/index.tsx",
+        "v-ui/stageshow/examples/story/story.css",
+        "v-ui/stageshow/examples/subscriptions/index.tsx",
+        "v-ui/stageshow/examples/subscriptions/subs.css",
+        "v-ui/stageshow/examples/swipe/index.tsx",
+        "v-ui/stageshow/examples/swipe/swipe.css",
+        "v-ui/stageshow/examples/table-edit/index.tsx",
+        "v-ui/stageshow/examples/table-edit/table.css",
+        "v-ui/stageshow/examples/telegram/index.tsx",
+        "v-ui/stageshow/examples/telegram/telegram.css",
+        "v-ui/stageshow/examples/tilted-stack/index.tsx",
+        "v-ui/stageshow/examples/tilted-stack/tilted.css",
+        "v-ui/stageshow/examples/upload/index.tsx",
+        "v-ui/stageshow/examples/upload/upload.css",
+        "v-ui/stageshow/examples/wikipedia/PHOTOS.md",
+        "v-ui/stageshow/examples/wikipedia/fuji.jpg",
+        "v-ui/stageshow/examples/wikipedia/index.tsx",
+        "v-ui/stageshow/examples/wikipedia/kawaguchiko.jpg",
+        "v-ui/stageshow/examples/wikipedia/wiki.css",
+        "v-ui/stageshow/examples/window-row/index.tsx",
+        "v-ui/stageshow/examples/window-row/row.css",
+        "v-ui/stageshow/kit/act.ts",
+        "v-ui/stageshow/kit/brands/1password-dark.svg",
+        "v-ui/stageshow/kit/brands/1password.svg",
+        "v-ui/stageshow/kit/brands/LICENSE-CRYPTO-FLAT.txt",
+        "v-ui/stageshow/kit/brands/LICENSE-PAYMENT-ICONS.txt",
+        "v-ui/stageshow/kit/brands/LICENSE-SIMPLE-ICONS.txt",
+        "v-ui/stageshow/kit/brands/LICENSE-SVGL.txt",
+        "v-ui/stageshow/kit/brands/SOURCES.md",
+        "v-ui/stageshow/kit/brands/amex-tile.svg",
+        "v-ui/stageshow/kit/brands/amex.svg",
+        "v-ui/stageshow/kit/brands/bankofamerica-dark.svg",
+        "v-ui/stageshow/kit/brands/bankofamerica.svg",
+        "v-ui/stageshow/kit/brands/barclays.svg",
+        "v-ui/stageshow/kit/brands/bitcoin.svg",
+        "v-ui/stageshow/kit/brands/chase.svg",
+        "v-ui/stageshow/kit/brands/discover.svg",
+        "v-ui/stageshow/kit/brands/dropbox-glyph.svg",
+        "v-ui/stageshow/kit/brands/dropbox.svg",
+        "v-ui/stageshow/kit/brands/ethereum.svg",
+        "v-ui/stageshow/kit/brands/figma.svg",
+        "v-ui/stageshow/kit/brands/github-dark.svg",
+        "v-ui/stageshow/kit/brands/github.svg",
+        "v-ui/stageshow/kit/brands/gmail.svg",
+        "v-ui/stageshow/kit/brands/google-calendar.svg",
+        "v-ui/stageshow/kit/brands/google-docs.svg",
+        "v-ui/stageshow/kit/brands/google-drive.svg",
+        "v-ui/stageshow/kit/brands/google-meet.svg",
+        "v-ui/stageshow/kit/brands/google-sheets.svg",
+        "v-ui/stageshow/kit/brands/google-slides.svg",
+        "v-ui/stageshow/kit/brands/hsbc.svg",
+        "v-ui/stageshow/kit/brands/index.ts",
+        "v-ui/stageshow/kit/brands/linear-dark.svg",
+        "v-ui/stageshow/kit/brands/linear.svg",
+        "v-ui/stageshow/kit/brands/mastercard.svg",
+        "v-ui/stageshow/kit/brands/monzo-dark.svg",
+        "v-ui/stageshow/kit/brands/monzo.svg",
+        "v-ui/stageshow/kit/brands/notion.svg",
+        "v-ui/stageshow/kit/brands/paypal.svg",
+        "v-ui/stageshow/kit/brands/revolut-dark.svg",
+        "v-ui/stageshow/kit/brands/revolut.svg",
+        "v-ui/stageshow/kit/brands/shopify.svg",
+        "v-ui/stageshow/kit/brands/slack.svg",
+        "v-ui/stageshow/kit/brands/solana.svg",
+        "v-ui/stageshow/kit/brands/stripe.svg",
+        "v-ui/stageshow/kit/brands/tether.svg",
+        "v-ui/stageshow/kit/brands/usdc.svg",
+        "v-ui/stageshow/kit/brands/vercel-dark.svg",
+        "v-ui/stageshow/kit/brands/vercel.svg",
+        "v-ui/stageshow/kit/brands/visa.svg",
+        "v-ui/stageshow/kit/brands/wellsfargo.svg",
+        "v-ui/stageshow/kit/brands/zoom.svg",
+        "v-ui/stageshow/kit/chart.css",
+        "v-ui/stageshow/kit/chart.tsx",
+        "v-ui/stageshow/kit/clock.ts",
+        "v-ui/stageshow/kit/code.css",
+        "v-ui/stageshow/kit/code.tsx",
+        "v-ui/stageshow/kit/controls/Badge.css",
+        "v-ui/stageshow/kit/controls/Badge.tsx",
+        "v-ui/stageshow/kit/controls/Field.css",
+        "v-ui/stageshow/kit/controls/Field.tsx",
+        "v-ui/stageshow/kit/controls/Segmented.css",
+        "v-ui/stageshow/kit/controls/Segmented.tsx",
+        "v-ui/stageshow/kit/controls/Slot.css",
+        "v-ui/stageshow/kit/controls/Slot.tsx",
+        "v-ui/stageshow/kit/controls/Tabs.css",
+        "v-ui/stageshow/kit/controls/Tabs.tsx",
+        "v-ui/stageshow/kit/controls/Toggle.css",
+        "v-ui/stageshow/kit/controls/Toggle.tsx",
+        "v-ui/stageshow/kit/controls/index.ts",
+        "v-ui/stageshow/kit/cursor.css",
+        "v-ui/stageshow/kit/cursor.tsx",
+        "v-ui/stageshow/kit/cursors.tsx",
+        "v-ui/stageshow/kit/ease.ts",
+        "v-ui/stageshow/kit/index.ts",
+        "v-ui/stageshow/kit/ios.css",
+        "v-ui/stageshow/kit/ios.tsx",
+        "v-ui/stageshow/kit/keys.css",
+        "v-ui/stageshow/kit/keys.tsx",
+        "v-ui/stageshow/kit/looks.ts",
+        "v-ui/stageshow/kit/measure.ts",
+        "v-ui/stageshow/kit/messages.css",
+        "v-ui/stageshow/kit/messages.tsx",
+        "v-ui/stageshow/kit/motion/Camera.css",
+        "v-ui/stageshow/kit/motion/Camera.tsx",
+        "v-ui/stageshow/kit/motion/Collapse.css",
+        "v-ui/stageshow/kit/motion/Collapse.tsx",
+        "v-ui/stageshow/kit/motion/Connector.css",
+        "v-ui/stageshow/kit/motion/Connector.tsx",
+        "v-ui/stageshow/kit/motion/Count.css",
+        "v-ui/stageshow/kit/motion/Count.tsx",
+        "v-ui/stageshow/kit/motion/Expand.css",
+        "v-ui/stageshow/kit/motion/Expand.tsx",
+        "v-ui/stageshow/kit/motion/Fly.css",
+        "v-ui/stageshow/kit/motion/Fly.tsx",
+        "v-ui/stageshow/kit/motion/Follow.css",
+        "v-ui/stageshow/kit/motion/Follow.tsx",
+        "v-ui/stageshow/kit/motion/Popover.css",
+        "v-ui/stageshow/kit/motion/Popover.tsx",
+        "v-ui/stageshow/kit/motion/Roll.css",
+        "v-ui/stageshow/kit/motion/Roll.tsx",
+        "v-ui/stageshow/kit/motion/Scroll.css",
+        "v-ui/stageshow/kit/motion/Scroll.tsx",
+        "v-ui/stageshow/kit/motion/States.css",
+        "v-ui/stageshow/kit/motion/States.tsx",
+        "v-ui/stageshow/kit/motion/Stream.css",
+        "v-ui/stageshow/kit/motion/Stream.tsx",
+        "v-ui/stageshow/kit/motion/Swap.css",
+        "v-ui/stageshow/kit/motion/Swap.tsx",
+        "v-ui/stageshow/kit/motion/index.ts",
+        "v-ui/stageshow/kit/parts/Avatar.css",
+        "v-ui/stageshow/kit/parts/Avatar.tsx",
+        "v-ui/stageshow/kit/parts/BrandMark.css",
+        "v-ui/stageshow/kit/parts/BrandMark.tsx",
+        "v-ui/stageshow/kit/parts/Check.css",
+        "v-ui/stageshow/kit/parts/Check.tsx",
+        "v-ui/stageshow/kit/parts/Chip.css",
+        "v-ui/stageshow/kit/parts/Chip.tsx",
+        "v-ui/stageshow/kit/parts/Facepile.css",
+        "v-ui/stageshow/kit/parts/Facepile.tsx",
+        "v-ui/stageshow/kit/parts/Icon.css",
+        "v-ui/stageshow/kit/parts/Icon.tsx",
+        "v-ui/stageshow/kit/parts/Menu.css",
+        "v-ui/stageshow/kit/parts/Menu.tsx",
+        "v-ui/stageshow/kit/parts/Meter.css",
+        "v-ui/stageshow/kit/parts/Meter.tsx",
+        "v-ui/stageshow/kit/parts/Pin.css",
+        "v-ui/stageshow/kit/parts/Pin.tsx",
+        "v-ui/stageshow/kit/parts/Row.css",
+        "v-ui/stageshow/kit/parts/Row.tsx",
+        "v-ui/stageshow/kit/parts/Spinner.css",
+        "v-ui/stageshow/kit/parts/Spinner.tsx",
+        "v-ui/stageshow/kit/parts/Toast.css",
+        "v-ui/stageshow/kit/parts/Toast.tsx",
+        "v-ui/stageshow/kit/parts/Tooltip.css",
+        "v-ui/stageshow/kit/parts/Tooltip.tsx",
+        "v-ui/stageshow/kit/parts/index.ts",
+        "v-ui/stageshow/kit/phone.css",
+        "v-ui/stageshow/kit/phone.tsx",
+        "v-ui/stageshow/kit/reduced-motion.ts",
+        "v-ui/stageshow/kit/stage.css",
+        "v-ui/stageshow/kit/stage.tsx",
+        "v-ui/stageshow/kit/stageshow.css",
+        "v-ui/stageshow/kit/util.ts",
+        "v-ui/stageshow/kit/window.css",
+        "v-ui/stageshow/kit/window.tsx",
+        "v-ui/stageshow/package-lock.json",
+        "v-ui/stageshow/package.json",
+        "v-ui/stageshow/playground/catalog.ts",
+        "v-ui/stageshow/playground/index.html",
+        "v-ui/stageshow/playground/main.tsx",
+        "v-ui/stageshow/playground/playback.ts",
+        "v-ui/stageshow/playground/preview.css",
+        "v-ui/stageshow/playground/preview.tsx",
+        "v-ui/stageshow/playground/tsconfig.json",
+        "v-ui/stageshow/playground/viewer.css",
+        "v-ui/stageshow/playground/viewer.tsx",
+        "v-ui/stageshow/playground/vite.config.ts",
+        "v-ui/stageshow/references/annotations.md",
+        "v-ui/stageshow/references/backgrounds.md",
+        "v-ui/stageshow/references/bento.md",
+        "v-ui/stageshow/references/brands.md",
+        "v-ui/stageshow/references/choreography.md",
+        "v-ui/stageshow/references/craft.md",
+        "v-ui/stageshow/references/framing.md",
+        "v-ui/stageshow/references/kit.md",
+        "v-ui/stageshow/references/looks.md",
+        "v-ui/stageshow/references/motion.md",
+        "v-ui/stageshow/references/products.md",
+        "v-ui/stageshow/references/rehearse.md",
+        "v-ui/stageshow/references/review.md",
+        "v-ui/stageshow/references/teaching.md",
+        "v-ui/stageshow/references/verify.md",
+        "v-ui/stageshow/scripts/browser.mjs",
+        "v-ui/stageshow/scripts/class-clash-core.mjs",
+        "v-ui/stageshow/scripts/class-clash.mjs",
+        "v-ui/stageshow/scripts/dev.mjs",
+        "v-ui/stageshow/scripts/film-checks.mjs",
+        "v-ui/stageshow/scripts/film.mjs",
+        "v-ui/stageshow/scripts/jumps-core.mjs",
+        "v-ui/stageshow/scripts/jumps.mjs",
+        "v-ui/stageshow/scripts/layout-core.mjs",
+        "v-ui/stageshow/scripts/layout.mjs",
+        "v-ui/stageshow/scripts/motion-watch.mjs",
+        "v-ui/stageshow/scripts/verification.mjs",
+        "v-ui/stageshow/teaching/composition.css",
+        "v-ui/stageshow/teaching/composition.tsx",
+        "v-ui/stageshow/teaching/continuity.css",
+        "v-ui/stageshow/teaching/continuity.tsx",
+        "v-ui/stageshow/teaching/contrasts.css",
+        "v-ui/stageshow/teaching/contrasts.tsx",
+        "v-ui/stageshow/teaching/details.css",
+        "v-ui/stageshow/teaching/details.tsx",
+        "v-ui/stageshow/teaching/edges.css",
+        "v-ui/stageshow/teaching/edges.tsx",
+        "v-ui/stageshow/teaching/relationships.css",
+        "v-ui/stageshow/teaching/relationships.tsx",
+        "v-ui/stageshow/teaching/scenes.css",
+        "v-ui/stageshow/teaching/scenes.tsx",
+        "v-ui/stageshow/teaching/style.css",
+        "v-ui/stageshow/teaching/style.tsx",
+        "v-ui/stageshow/teaching/text-settle.css",
+        "v-ui/stageshow/teaching/text-settle.tsx"
+      ],
+      "changed_files": [],
+      "finding_ids": []
+    },
+    {
+      "name": "v-venv-doctor",
+      "entrypoint": "v-venv-doctor/SKILL.md",
+      "status": "Improved",
+      "outcome": "Prefer explicitly supplied project environments and disclose missing tooling; preserve project version requirements instead of prescribing the historical stack.",
+      "resources_considered": [
+        "v-venv-doctor/SKILL.md",
+        "v-venv-doctor/references/venv-playbook.md",
+        "v-venv-doctor/scripts/venv-doctor.sh",
+        "v-venv-doctor/tests/test_project_environment.py"
+      ],
+      "changed_files": [
+        "v-venv-doctor/scripts/venv-doctor.sh",
+        "v-venv-doctor/tests/test_project_environment.py"
+      ],
+      "finding_ids": [
+        "R25"
+      ]
+    },
+    {
+      "name": "v-vercel-doctor",
+      "entrypoint": "v-vercel-doctor/SKILL.md",
+      "status": "Improved",
+      "outcome": "Report missing discovery tooling honestly; preserve verified remote-environment and production-build evidence boundaries.",
+      "resources_considered": [
+        "v-vercel-doctor/SKILL.md",
+        "v-vercel-doctor/references/divergence-playbook.md",
+        "v-vercel-doctor/scripts/vercel-divergence.sh"
+      ],
+      "changed_files": [
+        "v-vercel-doctor/scripts/vercel-divergence.sh"
+      ],
+      "finding_ids": [
+        "R02"
+      ]
+    },
+    {
+      "name": "v-vibe",
+      "entrypoint": "v-vibe/SKILL.md",
+      "status": "Improved",
+      "outcome": "Prune generated/dependency trees before package discovery; keep architecture signals as candidates, not runtime guarantees.",
+      "resources_considered": [
+        "v-vibe/SKILL.md",
+        "v-vibe/references/workspace-patterns.md",
+        "v-vibe/scripts/repo_audit_inventory.py",
+        "v-vibe/tests/test_discovery.py"
+      ],
+      "changed_files": [
+        "v-vibe/scripts/repo_audit_inventory.py",
+        "v-vibe/tests/test_discovery.py"
+      ],
+      "finding_ids": [
+        "R01"
+      ]
+    },
+    {
+      "name": "v-vibe-app",
+      "entrypoint": "v-vibe-app/SKILL.md",
+      "status": "Improved",
+      "outcome": "Check actual Git tracking for env files, redact secret previews, recognize current secret-key patterns, and use pruned migration discovery.",
+      "resources_considered": [
+        "v-vibe-app/SKILL.md",
+        "v-vibe-app/references/distributed-systems-resilience.md",
+        "v-vibe-app/references/enterprise-production-checklist.md",
+        "v-vibe-app/references/prelaunch-20-checklist.md",
+        "v-vibe-app/references/prelaunch-audit-reference.md",
+        "v-vibe-app/scripts/audit_app_vibe.py",
+        "v-vibe-app/tests/test_discovery.py"
+      ],
+      "changed_files": [
+        "v-vibe-app/scripts/audit_app_vibe.py",
+        "v-vibe-app/tests/test_discovery.py"
+      ],
+      "finding_ids": [
+        "R01",
+        "R05"
+      ]
+    },
+    {
+      "name": "v-vibe-macos",
+      "entrypoint": "v-vibe-macos/SKILL.md",
+      "status": "Improved",
+      "outcome": "Parse XML/binary entitlement plists by exact key/value; disclose malformed files and prune vendor discovery; correct async-network guidance.",
+      "resources_considered": [
+        "v-vibe-macos/SKILL.md",
+        "v-vibe-macos/references/app-store-notarization-checklist.md",
+        "v-vibe-macos/references/desktop-offline-resilience.md",
+        "v-vibe-macos/references/mac-app-store-release-readiness-checklist.md",
+        "v-vibe-macos/references/macos-desktop-architecture.md",
+        "v-vibe-macos/scripts/audit_macos_vibe.py",
+        "v-vibe-macos/tests/test_discovery.py"
+      ],
+      "changed_files": [
+        "v-vibe-macos/references/app-store-notarization-checklist.md",
+        "v-vibe-macos/references/desktop-offline-resilience.md",
+        "v-vibe-macos/scripts/audit_macos_vibe.py",
+        "v-vibe-macos/tests/test_discovery.py"
+      ],
+      "finding_ids": [
+        "R01",
+        "R07"
+      ]
+    },
+    {
+      "name": "v-vibe-ml",
+      "entrypoint": "v-vibe-ml/SKILL.md",
+      "status": "Improved",
+      "outcome": "Remove frozen model-name lists and obsolete provider recipes; retain chosen provider/model and consult current schema/model documentation.",
+      "resources_considered": [
+        "v-vibe-ml/SKILL.md",
+        "v-vibe-ml/references/ai-security-spend-evals.md",
+        "v-vibe-ml/references/llm-agentic-production-checklist.md",
+        "v-vibe-ml/references/streaming-serving-resilience.md",
+        "v-vibe-ml/scripts/audit_ml_vibe.py",
+        "v-vibe-ml/tests/test_discovery.py"
+      ],
+      "changed_files": [
+        "v-vibe-ml/references/ai-security-spend-evals.md",
+        "v-vibe-ml/references/llm-agentic-production-checklist.md",
+        "v-vibe-ml/references/streaming-serving-resilience.md",
+        "v-vibe-ml/scripts/audit_ml_vibe.py",
+        "v-vibe-ml/tests/test_discovery.py"
+      ],
+      "finding_ids": [
+        "R10"
+      ]
+    },
+    {
+      "name": "v-vibe-web",
+      "entrypoint": "v-vibe-web/SKILL.md",
+      "status": "Improved",
+      "outcome": "Prune package trees, handle crawler-specific robots rules, inspect modern metadata conventions, and preserve unverified deployment distinctions.",
+      "resources_considered": [
+        "v-vibe-web/SKILL.md",
+        "v-vibe-web/references/design-and-codebase-slop.md",
+        "v-vibe-web/references/geo-ai-search-checklist.md",
+        "v-vibe-web/references/google-technical-seo-checklist.md",
+        "v-vibe-web/references/speedmaxxing-web-performance.md",
+        "v-vibe-web/references/ux-trust-framework.md",
+        "v-vibe-web/references/web-prelaunch-checklist.md",
+        "v-vibe-web/scripts/audit_web_vibe.py",
+        "v-vibe-web/tests/test_discovery.py"
+      ],
+      "changed_files": [
+        "v-vibe-web/scripts/audit_web_vibe.py",
+        "v-vibe-web/tests/test_discovery.py"
+      ],
+      "finding_ids": [
+        "R01",
+        "R08",
+        "R09"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "R01",
+      "trigger": "Dependency/generated directories exist below the target project",
+      "frequency": 8,
+      "frequency_reason": "ordinary installed projects",
+      "impact": 4,
+      "impact_reason": "extra traversal costs and vendor false evidence",
+      "score": 32,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-perf",
+        "v-vibe",
+        "v-vibe-app",
+        "v-vibe-macos",
+        "v-vibe-web",
+        "v-backtest-audit",
+        "v-duckdb-layer",
+        "v-phase"
+      ],
+      "resolution": "Prune before descending and reuse relevant inventories."
+    },
+    {
+      "id": "R02",
+      "trigger": "A shell discovery helper runs without ripgrep",
+      "frequency": 3,
+      "frequency_reason": "bare/new developer environments",
+      "impact": 5,
+      "impact_reason": "empty scans could be read as clean evidence",
+      "score": 15,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-notes",
+        "v-readme",
+        "v-security",
+        "v-triage",
+        "v-vercel-doctor"
+      ],
+      "resolution": "Exit with an explicit missing-tool error."
+    },
+    {
+      "id": "R03",
+      "trigger": "Chrome source discovery runs with stdin closed or piped",
+      "frequency": 8,
+      "frequency_reason": "normal noninteractive agent execution",
+      "impact": 6,
+      "impact_reason": "source security checks silently scan no files",
+      "score": 48,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-chrome-extension"
+      ],
+      "resolution": "Supply explicit scan paths and retain location-only secret reports."
+    },
+    {
+      "id": "R04",
+      "trigger": "Hotspot patterns use double-escaped ripgrep expressions",
+      "frequency": 8,
+      "frequency_reason": "normal source-map execution",
+      "impact": 4,
+      "impact_reason": "I/O and polling evidence silently disappears",
+      "score": 32,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-scripts"
+      ],
+      "resolution": "Use valid regex patterns and exercise matching fixtures."
+    },
+    {
+      "id": "R05",
+      "trigger": "An ignored local env file is present or a source line contains a credential",
+      "frequency": 7,
+      "frequency_reason": "typical local app configuration",
+      "impact": 7,
+      "impact_reason": "false tracked-secret claims or credential leakage into reports",
+      "score": 49,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-vibe-app",
+        "v-chrome-extension"
+      ],
+      "resolution": "Verify Git tracking and redact report values."
+    },
+    {
+      "id": "R06",
+      "trigger": "A JWT prefix or legacy key example is treated as the privileged role",
+      "frequency": 6,
+      "frequency_reason": "common Supabase audit inputs",
+      "impact": 6,
+      "impact_reason": "incorrect privilege classification and stale new-client setup",
+      "score": 36,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-auth",
+        "v-security",
+        "v-scaffold"
+      ],
+      "resolution": "Distinguish publishable/secret keys and inspect legacy JWT role evidence."
+    },
+    {
+      "id": "R07",
+      "trigger": "Sandbox entitlement is false while another entitlement is true, or the plist is binary",
+      "frequency": 4,
+      "frequency_reason": "ordinary entitlement variants",
+      "impact": 8,
+      "impact_reason": "sandbox protection could be falsely reported enabled",
+      "score": 32,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-vibe-macos"
+      ],
+      "resolution": "Parse actual plist key/value pairs and disclose unreadable files."
+    },
+    {
+      "id": "R08",
+      "trigger": "robots.txt has crawler-specific groups or competing Allow rules",
+      "frequency": 5,
+      "frequency_reason": "standard production crawler configuration",
+      "impact": 5,
+      "impact_reason": "root crawl access could be reported incorrectly",
+      "score": 25,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-post-launch",
+        "v-vibe-web"
+      ],
+      "resolution": "Evaluate crawler groups and rule precedence; keep static limits visible."
+    },
+    {
+      "id": "R09",
+      "trigger": "Metadata is generated through modern framework file conventions",
+      "frequency": 5,
+      "frequency_reason": "common Next.js layouts",
+      "impact": 4,
+      "impact_reason": "source inventory misses actual metadata or invents runtime verification",
+      "score": 20,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-post-launch",
+        "v-vibe-web"
+      ],
+      "resolution": "Inspect supported source conventions and label unresolved runtime behavior."
+    },
+    {
+      "id": "R10",
+      "trigger": "Model identifiers are outside frozen scanner lists or a provider recipe has changed",
+      "frequency": 7,
+      "frequency_reason": "normal evolving model/API usage",
+      "impact": 5,
+      "impact_reason": "models or structured-response behavior are misclassified",
+      "score": 35,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-vibe-ml"
+      ],
+      "resolution": "Inventory actual identifiers and use current provider guidance."
+    },
+    {
+      "id": "R11",
+      "trigger": "CSV percent returns or missing observations enter the report loader",
+      "frequency": 5,
+      "frequency_reason": "ordinary financial CSV formatting",
+      "impact": 7,
+      "impact_reason": "units or dropped rows alter reported returns and risk",
+      "score": 35,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-backtest-report"
+      ],
+      "resolution": "Match percent parsing across loaders and reject missing observations."
+    },
+    {
+      "id": "R12",
+      "trigger": "Targets are integer-valued regression or forecast labels overlap the next fold",
+      "frequency": 4,
+      "frequency_reason": "routine ML/forecast configurations",
+      "impact": 7,
+      "impact_reason": "automatic task/protocol choice can mislead evaluation",
+      "score": 28,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-baselines"
+      ],
+      "resolution": "Expose task and temporal-gap controls and disclose assumptions."
+    },
+    {
+      "id": "R13",
+      "trigger": "Cross-validation fold spread is described as proof of noise or no signal",
+      "frequency": 7,
+      "frequency_reason": "normal baseline verdicts",
+      "impact": 5,
+      "impact_reason": "overstates the statistical conclusion",
+      "score": 35,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-baselines"
+      ],
+      "resolution": "Report the observed comparison and its descriptive limits."
+    },
+    {
+      "id": "R14",
+      "trigger": "Split files contain identical observations with reordered columns",
+      "frequency": 4,
+      "frequency_reason": "routine CSV export variations",
+      "impact": 6,
+      "impact_reason": "overlap could be missed or unrelated schemas compared",
+      "score": 24,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-dataset"
+      ],
+      "resolution": "Canonicalize schema/order and hash tuples efficiently."
+    },
+    {
+      "id": "R15",
+      "trigger": "Parquet schema readers are unavailable",
+      "frequency": 4,
+      "frequency_reason": "bare environments without optional readers",
+      "impact": 5,
+      "impact_reason": "unknown schemas were treated as matching",
+      "score": 20,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-duckdb-layer"
+      ],
+      "resolution": "Report unavailable schema coverage as unverified."
+    },
+    {
+      "id": "R16",
+      "trigger": "Metric benchmark emission is requested or target modules contain dataclasses",
+      "frequency": 5,
+      "frequency_reason": "normal known-answer audit workflow",
+      "impact": 6,
+      "impact_reason": "emitted tests could all skip or target imports fail",
+      "score": 30,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-metric-math"
+      ],
+      "resolution": "Emit executable resolved tests and register/cache imported modules."
+    },
+    {
+      "id": "R17",
+      "trigger": "Fit and split operations occur in different notebook cells",
+      "frequency": 7,
+      "frequency_reason": "normal notebook research",
+      "impact": 7,
+      "impact_reason": "leakage checks miss the combined pipeline",
+      "score": 49,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-timeseries-leakage"
+      ],
+      "resolution": "Analyze combined source while retaining original cell locations."
+    },
+    {
+      "id": "R18",
+      "trigger": "A notebook uses the documented stdlib output-strip fallback",
+      "frequency": 4,
+      "frequency_reason": "environments without nbconvert",
+      "impact": 9,
+      "impact_reason": "opening for write first can truncate the notebook",
+      "score": 36,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-notebook"
+      ],
+      "resolution": "Use a validated atomic replacement helper and preserve content/permissions."
+    },
+    {
+      "id": "R19",
+      "trigger": "Stable notebook functions already exist inside larger source modules",
+      "frequency": 5,
+      "frequency_reason": "normal notebook-to-src promotion",
+      "impact": 3,
+      "impact_reason": "duplicate logic is missed; output byte counts can be inaccurate",
+      "score": 15,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-notebook"
+      ],
+      "resolution": "Compare individual functions and count UTF-8 output bytes."
+    },
+    {
+      "id": "R20",
+      "trigger": "Provenance JSON/verification mode is used or a human card lacks a hash",
+      "frequency": 7,
+      "frequency_reason": "normal dataset-card workflow",
+      "impact": 7,
+      "impact_reason": "invalid JSON, false-current results, unnecessary profiling, or overwritten notes",
+      "score": 49,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-provenance"
+      ],
+      "resolution": "Separate output/mutation modes, hash-only verification, preserve cards, and fail on missing records."
+    },
+    {
+      "id": "R21",
+      "trigger": "Graph edges have a source endpoint but no provenance reference",
+      "frequency": 6,
+      "frequency_reason": "ordinary edge schemas",
+      "impact": 6,
+      "impact_reason": "an endpoint was mistaken for evidence provenance",
+      "score": 36,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-provenance"
+      ],
+      "resolution": "Validate explicit provenance references and their resolution."
+    },
+    {
+      "id": "R22",
+      "trigger": "Model serving lives under app/ or api/ rather than backend/",
+      "frequency": 5,
+      "frequency_reason": "common backend layouts",
+      "impact": 6,
+      "impact_reason": "real inference paths can be mislabeled demo-only",
+      "score": 30,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-ml"
+      ],
+      "resolution": "Discover active alternative layouts and refresh artifact guidance."
+    },
+    {
+      "id": "R23",
+      "trigger": "Aliased statistical model fits or covariance options are used",
+      "frequency": 5,
+      "frequency_reason": "standard statsmodels-style usage",
+      "impact": 5,
+      "impact_reason": "inference inventory misses fitted model details",
+      "score": 25,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-regression-diagnostics"
+      ],
+      "resolution": "Resolve call aliases and fit options in the inventory."
+    },
+    {
+      "id": "R24",
+      "trigger": "Ledger logging receives a repo-relative data path, invalid metrics, or an incompatible header",
+      "frequency": 5,
+      "frequency_reason": "routine experiment input variants",
+      "impact": 6,
+      "impact_reason": "missing provenance or malformed append-only records",
+      "score": 30,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-run-ledger"
+      ],
+      "resolution": "Validate before writing; resolve target-relative data; refuse schema mismatch."
+    },
+    {
+      "id": "R25",
+      "trigger": "A project virtual environment is named or selected differently from a historical default",
+      "frequency": 5,
+      "frequency_reason": "normal local environment variation",
+      "impact": 5,
+      "impact_reason": "doctor probes the wrong environment or gives misleading repair advice",
+      "score": 25,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-venv-doctor"
+      ],
+      "resolution": "Inspect supplied/project environment and disclose unavailable evidence."
+    },
+    {
+      "id": "R26",
+      "trigger": "Git changes include Unicode, tabs, newlines, renames, or many files",
+      "frequency": 5,
+      "frequency_reason": "recurring source/data filenames and changesets",
+      "impact": 5,
+      "impact_reason": "manifest corruption or many per-file subprocesses",
+      "score": 25,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-git-multi",
+        "v-notes-update"
+      ],
+      "resolution": "Use NUL-delimited Git output and explicit JSON-quoted names."
+    },
+    {
+      "id": "R27",
+      "trigger": "An untracked dataset or model is large",
+      "frequency": 5,
+      "frequency_reason": "regular data/ML artifacts",
+      "impact": 6,
+      "impact_reason": "whole-file inspection spikes memory or exhausts it",
+      "score": 30,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-git-multi"
+      ],
+      "resolution": "Read bounded chunks and stop early for binary files."
+    },
+    {
+      "id": "R28",
+      "trigger": "Notes refresh runs on native macOS Bash 3.2",
+      "frequency": 8,
+      "frequency_reason": "the current workstation default",
+      "impact": 5,
+      "impact_reason": "unsupported namerefs abort the workflow",
+      "score": 40,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-notes-update"
+      ],
+      "resolution": "Use a compatible deduplication loop."
+    },
+    {
+      "id": "R29",
+      "trigger": "A phase document references a wrong folder with an existing basename or a spaced/encoded path",
+      "frequency": 4,
+      "frequency_reason": "normal documentation references",
+      "impact": 4,
+      "impact_reason": "file existence can be falsely confirmed or missed",
+      "score": 16,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-phase"
+      ],
+      "resolution": "Resolve exact paths, decode links, and label basename matches as candidates."
+    },
+    {
+      "id": "R30",
+      "trigger": "A Next.js package is detected only as generic React",
+      "frequency": 5,
+      "frequency_reason": "common web documentation targets",
+      "impact": 3,
+      "impact_reason": "README discovery uses an incomplete product classification",
+      "score": 15,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-readme"
+      ],
+      "resolution": "Prioritize framework-specific evidence."
+    },
+    {
+      "id": "R31",
+      "trigger": "A fresh generated project imports undeclared utilities or declares unusable lint/test commands",
+      "frequency": 9,
+      "frequency_reason": "every fresh affected scaffold",
+      "impact": 5,
+      "impact_reason": "new development projects fail setup or validation",
+      "score": 45,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-scaffold"
+      ],
+      "resolution": "Declare required dependencies/configuration and exercise actual generated build/tests."
+    },
+    {
+      "id": "R32",
+      "trigger": "A new web scaffold selects unsupported Vite 5 or legacy Supabase key guidance",
+      "frequency": 10,
+      "frequency_reason": "previous fresh-project defaults",
+      "impact": 5,
+      "impact_reason": "starts new work on unsupported or outdated tooling",
+      "score": 50,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-scaffold"
+      ],
+      "resolution": "Use supported compatible Vite 7.3 and publishable keys for new clients."
+    },
+    {
+      "id": "R33",
+      "trigger": "Nested routes, pathless guards, index routes, or basenames are present",
+      "frequency": 6,
+      "frequency_reason": "normal React Router layouts",
+      "impact": 5,
+      "impact_reason": "incorrect URLs or protected pages can be marked public",
+      "score": 30,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-shots"
+      ],
+      "resolution": "Parse static declarations with project TypeScript; keep unresolved routes as candidates."
+    },
+    {
+      "id": "R34",
+      "trigger": "Pages keep polling after content is ready",
+      "frequency": 6,
+      "frequency_reason": "ordinary analytics or live data pages",
+      "impact": 4,
+      "impact_reason": "network-idle waits delay or prevent captures",
+      "score": 24,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-shots"
+      ],
+      "resolution": "Wait for DOM and a content selector; disable animations for captures."
+    },
+    {
+      "id": "R35",
+      "trigger": "A dynamic route sample points outside the selected origin",
+      "frequency": 2,
+      "frequency_reason": "less common sample configuration error",
+      "impact": 4,
+      "impact_reason": "capture visits an unintended page",
+      "score": 8,
+      "confidence": "Confirmed from source and/or focused fixture behavior",
+      "skills": [
+        "v-shots"
+      ],
+      "resolution": "Validate sample paths before launching the browser."
+    }
+  ],
+  "deferred_issues": [],
+  "benchmarks": {
+    "audit_discovery": {
+      "fixture": {
+        "owned_source_files": 40,
+        "ignored_directories": 400,
+        "ignored_files": 8000,
+        "layout": "src/*.tsx plus node_modules/vendorN/{package.json,19 dependency*.json}; package dependencies empty",
+        "runs_per_version": 3,
+        "timing": "median wall time with identical scandir instrumentation; no network"
+      },
+      "v-perf": {
+        "before": {
+          "median_seconds": 0.14554,
+          "directory_scans": 3226
+        },
+        "after": {
+          "median_seconds": 0.003311,
+          "directory_scans": 16
+        },
+        "speedup": 43.96
+      },
+      "v-vibe": {
+        "before": {
+          "median_seconds": 0.328394,
+          "directory_scans": 3225
+        },
+        "after": {
+          "median_seconds": 0.007966,
+          "directory_scans": 9
+        },
+        "speedup": 41.22
+      },
+      "v-vibe-web": {
+        "before": {
+          "median_seconds": 0.08641,
+          "directory_scans": 1215
+        },
+        "after": {
+          "median_seconds": 0.00408,
+          "directory_scans": 12
+        },
+        "speedup": 21.18
+      },
+      "v-vibe-macos": {
+        "before": {
+          "median_seconds": 0.187643,
+          "directory_scans": 4032
+        },
+        "after": {
+          "median_seconds": 0.001286,
+          "directory_scans": 8
+        },
+        "speedup": 145.91
+      },
+      "v-vibe-app": {
+        "before": {
+          "median_seconds": 0.188979,
+          "directory_scans": 4838
+        },
+        "after": {
+          "median_seconds": 0.003366,
+          "directory_scans": 4
+        },
+        "speedup": 56.14
+      }
+    },
+    "data_helpers": {
+      "scan_pruning": {
+        "source_files": 100,
+        "excluded_files": 4000,
+        "old_median_s": 0.0495833750028396,
+        "new_median_s": 0.0010750840010587126,
+        "speedup": 46.120465892908165,
+        "repeats": 5
+      },
+      "row_hashing": {
+        "rows": 100000,
+        "numeric_columns": 6,
+        "file_bytes": 11780151,
+        "old_median_s": 1.2725421659997664,
+        "new_median_s": 0.38564462499925867,
+        "speedup": 3.299779339598504,
+        "repeats": 3
+      },
+      "hash_only_verify": {
+        "rows": 100000,
+        "file_bytes": 11780151,
+        "old_median_s": 0.09224666599766351,
+        "new_median_s": 0.005455874998006038,
+        "speedup": 16.907767504089986,
+        "repeats": 3,
+        "note": "Old mode hashes then profiles 50000 CSV rows; new verify mode only hashes"
+      }
+    },
+    "git_manifest": {
+      "files": 305,
+      "before_seconds": 2.831303166996804,
+      "after_seconds": 0.13572833299986087,
+      "note": "Single fixture wall-time comparison, not a whole-workflow guarantee"
+    }
+  },
+  "validation": {
+    "collection": {
+      "skills": 44,
+      "syntax_checks": 100,
+      "tests": 100,
+      "skipped": 0,
+      "errors": []
+    },
+    "generated_web": "Fresh dependency install, lint and build PASS on Vite 7.3.7; React 18/Tailwind 3 preserved",
+    "generated_python": "Wheel built; two generated pytest cases passed against wheel using existing ML interpreter",
+    "typescript_routes": "Real target TypeScript parser fixtures PASS: nesting, guards, basename, route objects, index and unresolved basename",
+    "generated_supabase": "Fresh dependency install, lint and production build PASS; publishable-key client configuration"
+  },
+  "limits": [
+    "No live Chromium visual rendering, external site deployment, signed macOS release, or store submission was performed.",
+    "Static scanner matches remain candidates until verified in each future target project.",
+    "Historical Python ML pins remain an explicit compatibility preset, not a claim of latest versions.",
+    "Benchmarks are fixture-specific and exclude external service/network performance."
+  ]
+}
