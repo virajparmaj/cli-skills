@@ -47,7 +47,7 @@ The families Veer's stack actually produces (React 18 + Vite + TS strict + Tailw
 
 **Common root causes → smallest fix:**
 
-- `Cannot read properties of undefined` — reading into data that is still loading or null. Fix: guard with a loading/empty state or optional chaining at that access. (This is a v-ux-adjacent smell but the crash fix belongs here.)
+- `Cannot read properties of undefined` — reading into data that is still loading or null. Fix: guard with a loading/empty state or optional chaining at that access. (This is a v-ui-adjacent smell but the crash fix belongs here.)
 - `Rendered more/fewer hooks` — a hook behind a condition or early return. Fix: move the hook above the conditional; hooks run unconditionally, every render.
 - `Maximum update depth exceeded` — `setState` during render or an effect with a bad/missing dependency array causing a loop. Fix: correct the `useEffect` deps, or move the setState out of render.
 - `Minified React error #NNN` — decode the number at react.dev/errors, then treat as the underlying error above.
@@ -118,4 +118,4 @@ The families Veer's stack actually produces (React 18 + Vite + TS strict + Tailw
 - **Trust the deepest repo frame, not the library frame.** The fix is almost never inside `node_modules/`, `site-packages/`, or `dist/`.
 - **Fresh git recency = prime suspect.** If the marked line was last touched in the latest commit, it is the likely regression.
 - **One error, one fix.** If you spot a second, unrelated bug while reading context, note it in one line after VERIFY — do not fix it in the same pass.
-- **Boundaries:** deep serving-correctness review → v-ml; loading/empty/error UX gaps → v-ux; secrets/RLS hardening → v-security; commit message for the fix → v-git.
+- **Boundaries:** deep serving-correctness review → v-ml; loading/empty/error UX gaps → v-ui; secrets/RLS hardening → v-security; commit message for the fix → v-git.

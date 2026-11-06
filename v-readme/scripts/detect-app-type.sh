@@ -39,7 +39,7 @@ find_first() {
        -path '*/__pycache__' -o \
        -path '*/venv' -o \
        -path '*/.venv' \) -prune -o \
-    -maxdepth "$maxdepth" "$@" -print 2>/dev/null | sort | head -n 1
+    -maxdepth "$maxdepth" "$@" -print 2>/dev/null | sort | sed -n '1p'
 }
 
 rel_path() {
@@ -53,48 +53,28 @@ rel_path() {
   fi
 }
 
-extract_package_script() {
-  local file="$1"
-  local key="$2"
-  awk -v key="\"$key\"" '
-    /"scripts"[[:space:]]*:/ { in_scripts=1 }
-    in_scripts && index($0, key) {
-      line=$0
-      sub(/^[^:]*:[[:space:]]*"/, "", line)
-      sub(/".*$/, "", line)
-      print line
-      exit
-    }
-    in_scripts && /^[[:space:]]*}[[:space:]]*,?[[:space:]]*$/ { exit }
-  ' "$file"
-}
-
 choose_package_command() {
   local file="$1"
   shift
-  local runner="npm run"
-
-  if [ -z "$file" ] || [ ! -f "$file" ]; then
-    return 0
-  fi
-
-  if [ -f "$(dirname "$file")/pnpm-lock.yaml" ]; then
-    runner="pnpm"
-  elif [ -f "$(dirname "$file")/yarn.lock" ]; then
-    runner="yarn"
-  fi
-
-  local key
-  for key in "$@"; do
-    if [ -n "$(extract_package_script "$file" "$key")" ]; then
-      if [ "$runner" = "npm run" ]; then
-        echo "$runner $key"
-      else
-        echo "$runner $key"
-      fi
-      return
-    fi
-  done
+  [ -f "$file" ] || return 0
+  python3 - "$file" "$@" <<'PACKAGE_SCRIPTS'
+import json
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])
+try:
+    data = json.loads(path.read_text())
+except (OSError, ValueError):
+    raise SystemExit(0)
+manager = str(data.get("packageManager", "")).split("@", 1)[0]
+if manager not in {"npm", "pnpm", "yarn", "bun"}:
+    manager = next((name for lock, name in [("pnpm-lock.yaml", "pnpm"), ("yarn.lock", "yarn"), ("bun.lock", "bun"), ("bun.lockb", "bun")] if (path.parent / lock).exists()), "npm")
+scripts = data.get("scripts", {})
+for key in sys.argv[2:]:
+    if isinstance(scripts.get(key), str) and scripts[key].strip():
+        print(f"{manager} run {key}")
+        break
+PACKAGE_SCRIPTS
 }
 
 first_grep_match() {
@@ -121,7 +101,7 @@ first_grep_match() {
     \( -name '*.js' -o -name '*.jsx' -o -name '*.ts' -o -name '*.tsx' -o \
        -name '*.py' -o -name '*.swift' -o -name '*.rs' -o -name '*.css' -o \
        -name '*.scss' -o -name '*.json' -o -name '*.toml' \) \
-    -print0 2>/dev/null | xargs -0 grep -Eil "$pattern" 2>/dev/null | sort | head -n 1 || true)"
+    -print0 2>/dev/null | xargs -0 grep -Eil "$pattern" 2>/dev/null | sort | sed -n '1p' || true)"
   echo "$path"
 }
 
@@ -129,7 +109,7 @@ extract_port_from_file() {
   local file="$1"
   if [ -f "$file" ]; then
     grep -Eo 'localhost:[0-9]{3,5}|[Pp][Oo][Rr][Tt][^0-9]{0,20}[0-9]{3,5}|--port[ =][0-9]{3,5}' "$file" 2>/dev/null \
-      | grep -Eo '[0-9]{3,5}' | head -n 1 || true
+      | grep -Eo '[0-9]{3,5}' | sed -n '1p' || true
   fi
 }
 

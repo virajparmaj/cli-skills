@@ -32,7 +32,7 @@ find_first() {
        -path '*/target' -o \
        -path '*/venv' -o \
        -path '*/.venv' \) -prune -o \
-    -maxdepth 3 -type f -name "$pattern" -print 2>/dev/null | sort | head -n 1
+    -maxdepth 3 -type f -name "$pattern" -print 2>/dev/null | sort | sed -n '1p'
 }
 
 print_matches() {
@@ -105,7 +105,7 @@ entrypoints="$(find "$repo_root" \
   -name index.tsx -o \
   -name index.jsx -o \
   -name main.rs \
-  \) -print 2>/dev/null | sort | head -n 12)"
+  \) -print 2>/dev/null | sort | sed -n '1,12p')"
 
 ui_files="$(find "$repo_root" \
   \( -path '*/.git' -o \
@@ -127,7 +127,7 @@ ui_files="$(find "$repo_root" \
   -iname '*window*' -o \
   -iname '*screen*' -o \
   -iname '*dialog*' \) \
-  \) -print 2>/dev/null | sort | head -n 20)"
+  \) -print 2>/dev/null | sort | sed -n '1,20p')"
 
 install_files="$(find "$repo_root" \
   \( -path '*/.git' -o \
@@ -150,7 +150,7 @@ install_files="$(find "$repo_root" \
   -name 'requirements-dev.txt' -o \
   -name '.nvmrc' -o \
   -name '.python-version' \
-  \) -print 2>/dev/null | sort | head -n 20)"
+  \) -print 2>/dev/null | sort | sed -n '1,20p')"
 
 test_files="$(find "$repo_root" \
   \( -path '*/.git' -o \
@@ -170,7 +170,7 @@ test_files="$(find "$repo_root" \
   -name 'vitest.config.*' -o \
   -name 'playwright.config.*' -o \
   -name 'jest.config.*' \
-  \) -print 2>/dev/null | sort | head -n 20)"
+  \) -print 2>/dev/null | sort | sed -n '1,20p')"
 
 branding_files="$(find "$repo_root" \
   \( -path '*/.git' -o \
@@ -193,7 +193,7 @@ branding_files="$(find "$repo_root" \
   -iname '*icon*.jpeg' -o \
   -iname '*icon*.svg' -o \
   -iname '*appicon*.icns' \
-  \) -print 2>/dev/null | sort | head -n 24)"
+  \) -print 2>/dev/null | sort | sed -n '1,24p')"
 
 screenshot_dirs="$(find "$repo_root" \
   \( -path '*/.git' -o \
@@ -253,7 +253,7 @@ route_files="$(find "$repo_root" \
   -path '*/pages/*.ts' -o \
   -path '*/pages/*.jsx' -o \
   -path '*/pages/*.js' \
-  \) -print 2>/dev/null | sort | head -n 30)"
+  \) -print 2>/dev/null | sort | sed -n '1,30p')"
 
 modal_files="$(find "$repo_root" \
   \( -path '*/.git' -o \
@@ -278,7 +278,7 @@ modal_files="$(find "$repo_root" \
   -iname '*drawer*' -o \
   -iname '*popover*' -o \
   -iname '*sheet*' \
-  \) -print 2>/dev/null | sort | head -n 30)"
+  \) -print 2>/dev/null | sort | sed -n '1,30p')"
 
 dark_mode_files="$(find "$repo_root" \
   \( -path '*/.git' -o \
@@ -307,7 +307,7 @@ dark_mode_files="$(find "$repo_root" \
   -name '*.py' -o \
   -name '*.swift' -o \
   -name '*.rs' \
-  \) -print0 2>/dev/null | xargs -0 grep -Eil 'dark|ThemeProvider|prefers-color-scheme' 2>/dev/null | sort | head -n 20 || true)"
+  \) -print0 2>/dev/null | xargs -0 grep -Eil 'dark|ThemeProvider|prefers-color-scheme' 2>/dev/null | sort | sed -n '1,20p' || true)"
 
 existing_screenshots=""
 if [ -n "$screenshot_dirs" ]; then
@@ -324,7 +324,7 @@ if [ -n "$screenshot_dirs" ]; then
 $screenshot_dirs
 EOF
 )"
-  existing_screenshots="$(printf '%s\n' "$existing_screenshots" | sed '/^$/d' | sort | head -n 40)"
+  existing_screenshots="$(printf '%s\n' "$existing_screenshots" | sed '/^$/d' | sort | sed -n '1,40p')"
 fi
 
 notes_dir=""

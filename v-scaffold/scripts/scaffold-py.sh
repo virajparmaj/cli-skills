@@ -35,6 +35,7 @@ DEV_STACK=(
   "black==24.10.0"
   "isort==5.13.2"
   "ipykernel"
+  "pytest"
 )
 
 # --- args -----------------------------------------------------------------
@@ -54,11 +55,15 @@ for arg in "$@"; do
     --no-venv) make_venv=0 ;;
     --no-notebook) make_notebook=0 ;;
     --force) force=1 ;;
+    -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
+    --*) echo "Unknown option: $arg" >&2; exit 2 ;;
     *)
       if [[ -z "$target_dir" ]]; then
         target_dir="$arg"
       elif [[ -z "$package_name" ]]; then
         package_name="$arg"
+      else
+        echo "Unexpected argument: $arg" >&2; exit 2
       fi
       ;;
   esac
@@ -76,6 +81,12 @@ target_dir="$(cd "$target_dir" && pwd)"
 package_name="$(printf '%s' "$package_name" | tr '[:upper:]-' '[:lower:]_' | tr -cd 'a-z0-9_')"
 [[ -z "$package_name" ]] && package_name="app"
 [[ "$package_name" =~ ^[0-9] ]] && package_name="pkg_$package_name"
+package_name="$(python3 - "$package_name" <<'PACKAGE_NAME'
+import keyword, sys
+name = sys.argv[1]
+print("pkg_" + name if keyword.iskeyword(name) else name)
+PACKAGE_NAME
+)"
 
 created=()
 skipped=()
@@ -403,4 +414,5 @@ echo "1. cd $target_dir"
 echo "2. source .venv/bin/activate   # if venv was created"
 echo "3. pip install -e \".[dev]\"    # installs pinned stack + Black/isort"
 echo "4. python -m ipykernel install --user --name $package_name"
-echo "then: git init && git add . && commit in Veer's format"
+echo "5. python -m pytest"
+echo "Commit only when requested, using Veer's identity and intended files."

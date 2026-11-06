@@ -1,6 +1,6 @@
 ---
 name: v-phase
-description: "Run the next numbered phase-doc contract in a repo driven by phase-NN.md docs: verify prior phases against real code, implement the requested phase strictly from its doc, then update the doc. For the vee-cee workflow where the prompt is 'phases 1-9 are completed, implement phase 10 from this doc'. Capabilities: run phase-status.sh to extract each phase doc's status markers, acceptance checkboxes, and promised file paths and grep the repo to prove prior phases landed; emit a strict pre-flight table (phase | status | evidence | verdict CONFIRMED/MISSING) labeled Confirmed from code vs Strongly inferred; run extract-equations.py to trace each stated formula to its code line (MISMATCH/MISSING/ORPHAN); implement with no scope beyond the contract; then check off done acceptance items and append Implemented — date. Trigger phrases: implement phase 10 from this doc, phases 1-9 are completed do the next phase, verify the phase docs against the code, run the next phase contract, check my derivation matches the code."
+description: "Verify claimed prior phase completion, implement the requested phase-NN.md contract, validate its acceptance items and formulas, then update its status. Use for phase-driven implementation or phase verification."
 ---
 
 # Phase Contract Executor
@@ -12,19 +12,11 @@ The pre-flight (Steps 1-2) is strictly read-only. Do not edit any file during
 pre-flight. Only after the gap gate (Step 3) passes or the user explicitly
 accepts a gap do you write implementation code.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and execution
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
+Verify code and required acceptance checks, not just checked boxes or existing filenames. A formula scanner proposes candidates; trace its inputs, units, and implementation before declaring a mismatch.
 
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Exhaust the search.** For discovery, keep going until two consecutive passes surface nothing new; do not stop at the first plausible batch. Never silently cap coverage — state what you skipped and why.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
+Resolve bundled `scripts/` and `references/` from the directory containing this `SKILL.md`, and pass the target repository explicitly. If a helper cannot run, inspect the relevant source directly and state the remaining verification gap. Stop after the requested deliverable and applicable checks are complete.
 
 ## Quick flow
 
@@ -104,7 +96,7 @@ gaps recorded (or "no prior gaps").
 ## Boundary with other skills
 
 - Full architecture/maintainability sweep: use `v-vibe`.
-- Serving-side ML correctness: use `v-ml` or `v-ml-deploy`.
+- Serving-side ML correctness: use `v-ml`.
 - Commit message after the phase lands: use `v-git`.
 - Creating the `notes/` docs this skill reads: use `v-notes`.
   `v-phase` executes one phase contract; it does not audit the whole repo.

@@ -137,7 +137,6 @@ echo "=== typed client types file ==="
 types_file=""
 for cand in \
   src/integrations/supabase/types.ts \
-  src/lib/supabase.ts \
   src/types/supabase.ts \
   src/types/database.types.ts \
   src/lib/database.types.ts \
@@ -147,12 +146,20 @@ for cand in \
     break
   fi
 done
-if [[ -z "$types_file" ]]; then
-  types_file="$(find src -type f \( -name 'types.ts' -path '*supabase*' -o -name 'database.types.ts' \) 2>/dev/null | head -1 | sed 's|^\./||')"
+if [[ -z "$types_file" && -d src ]]; then
+  types_file="$(find src -type f \( -name 'types.ts' -path '*supabase*' -o -name 'database.types.ts' \) 2>/dev/null | head -1 | sed 's|^\./||' || true)"
+fi
+# A hand-maintained client is not a safe generator redirect target.
+if [[ -z "$types_file" && -f src/lib/supabase.ts ]]; then
+  types_file="src/lib/supabase.ts"
 fi
 if [[ -n "$types_file" ]]; then
   echo "$types_file"
-  echo "  regenerate after applying the migration."
+  if [[ "$types_file" == "src/lib/supabase.ts" ]]; then
+    echo "  inspect Database type: hand-maintained client; do not overwrite with generated output."
+  else
+    echo "  regenerate after applying the migration."
+  fi
 else
   echo "NONE FOUND — no typed Supabase client file detected under src/."
 fi

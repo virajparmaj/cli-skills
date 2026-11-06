@@ -59,7 +59,7 @@ Start it (preview/launch tooling or `npm run dev`), wait until it serves, then p
 
 Per route the script:
 
-1. `goto(url, { waitUntil: "networkidle", timeout: 30000 })` — lets Supabase/API calls and route-level code-split chunks finish.
+1. `goto(url, { waitUntil: "domcontentloaded", timeout: 30000 })` — lets Supabase/API calls and route-level code-split chunks finish.
 2. `waitForTimeout(600)` — settles entrance animations and lazy images.
 3. `screenshot({ fullPage: true })`.
 
@@ -101,3 +101,9 @@ Output lines are `CAPTURED <path> -> <file> (<size>, <viewport>)` or `SKIPPED <p
 - Dynamic routes without a real `samplePath` are SKIPPED.
 - If Playwright is not installed, stop and print the install hint (`npm i -D playwright && npx playwright install chromium`) — do not silently produce nothing.
 - The manifest must reflect files that exist on disk with real sizes; do not report a capture you did not verify.
+
+## Parser and readiness updates (2026-11-06)
+
+The scanner uses the target project’s TypeScript parser for static parent paths, index routes, pathless guard layouts, and literal basenames. Without it, regex output stays `candidate`; review and reclassify explicitly before capture. Dynamic expressions, imported route arrays, runtime guards, loaders, and redirects still need source/runtime confirmation. No application code is executed by discovery. See [React Router routing](https://reactrouter.com/start/declarative/routing).
+
+Capture uses `domcontentloaded` followed by a visible readiness selector (`--wait-for` or per-route `readySelector`). Pick a selector representing the loaded view. Persistent analytics or polling should not force a `networkidle` timeout; Playwright [discourages that readiness signal](https://playwright.dev/docs/api/class-page#page-goto). Capture disables animations and hides the caret. Inspect the resulting image for the intended route and completed data state.

@@ -12,7 +12,8 @@ why. Never pad a scaffold beyond this list — extra boilerplate is a defect her
 
 | Path | Purpose |
 |------|---------|
-| `package.json` | React 18 + Vite deps only; `dev`/`build`/`preview`/`lint` scripts. `build` runs `tsc -b && vite build`. |
+| `package.json` | React 18 + Vite + declared utility and lint deps; `dev`/`build`/`preview`/`lint` scripts. `build` runs `tsc -b && vite build`. |
+| `eslint.config.js` | ESLint flat config with TypeScript/browser rules; makes the declared lint script runnable. |
 | `tsconfig.json` | `strict: true`, `noUnusedLocals`, `noUnusedParameters`, `@/*` -> `./src/*` alias. |
 | `vite.config.ts` | React plugin + `@` alias mirroring tsconfig. |
 | `tailwind.config.ts` | `darkMode: ["class"]`, content globs for `index.html` + `src/**/*.{ts,tsx}`. |
@@ -37,7 +38,7 @@ why. Never pad a scaffold beyond this list — extra boilerplate is a defect her
 |------|---------|
 | `src/lib/supabase.ts` | Typed client from `lib/`; fails fast if env vars are missing. |
 | `src/types/supabase.ts` | Placeholder `Database` type; regen with `supabase gen types typescript`. |
-| `.env.example` | Adds `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. |
+| `.env.example` | Adds `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`. |
 
 ### Rationale
 
@@ -63,7 +64,7 @@ why. Never pad a scaffold beyond this list — extra boilerplate is a defect her
 |------|---------|
 | `pyproject.toml` | Metadata, `requires-python = ">=3.11,<3.12"`, pinned deps, `[tool.black]` line-length 100, `[tool.isort]` black profile, src-layout packages. |
 | `requirements.txt` | Pinned runtime stack (mirror of pyproject deps for non-pyproject workflows). |
-| `requirements-dev.txt` | `-r requirements.txt` + Black/isort/ipykernel. |
+| `requirements-dev.txt` | `-r requirements.txt` + Black/isort/ipykernel/pytest. |
 | `src/<pkg>/__init__.py` | Package marker + `__version__`. |
 | `src/<pkg>/data.py` | `load_csv()` with Google-style docstring and explicit missing-file handling. |
 | `tests/__init__.py`, `tests/test_data.py` | pytest suite covering `load_csv` happy + error path. |
@@ -73,7 +74,7 @@ why. Never pad a scaffold beyond this list — extra boilerplate is a defect her
 | `README.md` | Setup + layout. |
 | `.venv/` | Per-project venv created with Python 3.11 (unless `--no-venv` or 3.11 is absent). |
 
-### Pinned ML stack (single source of truth)
+### Historical ML preset (single source of truth)
 
 ```
 numpy==2.1.2
@@ -93,6 +94,7 @@ Dev tooling:
 black==24.10.0
 isort==5.13.2
 ipykernel
+pytest
 ```
 
 ### Rationale
@@ -103,7 +105,7 @@ ipykernel
 - **Black line-length 100 + isort (black profile)** — the documented formatting rules, encoded in
   `pyproject.toml` so `black .` and `isort .` need no flags.
 - **Exact pins for the ML stack** — reproducibility; these versions are the documented set. `structlog`
-  is intentionally unpinned to track the latest, matching the documented stack.
+  and notebook tooling remain unpinned in this historical preset. This is a compatibility baseline, not a claim that the versions are current. Preserve existing project pins; refresh a new project’s dependencies as a coherent, tested set when the user requests updated versions.
 - **src/ layout** — importable package with stable logic; keeps notebooks thin.
 - **Clean notebook order** — config cell, data cell, preprocessing, modeling, each ending with a
   `✅` success print. Stable logic graduates from the notebook into `src/`.
@@ -115,7 +117,7 @@ ipykernel
 
 ## Commit conventions (both tracks)
 
-Finish with an initial commit in Veer's format. Default type `chore` for a plain scaffold.
+Create an initial commit only when requested, using Veer's author and committer identity and intended files. Default type `chore` for a plain scaffold.
 
 ```bash
 git init
@@ -136,6 +138,9 @@ Summary is 4-5 words; body bullets start with `- ` and can be rough grammar.
 
 - Do not add routing libraries, state managers, testing frameworks (beyond the Python pytest stub),
   UI kits other than shadcn, or any dependency not listed above unless the user explicitly asks.
-- Do not run `npm install`, `pip install`, or `git commit` unless the user asks you to run them —
-  present them as ready-to-run blocks.
+- Run dependency setup when needed to complete the user-authorized deliverable, using the project environment. Report installation failures honestly. Commit or push only when requested.
 - Do not overwrite existing files without `--force`; report skipped files honestly.
+
+## Version and API review (2026-11-06)
+
+New web projects retain the user’s React 18/Tailwind 3 choices and use the supported Vite 7.3 line with a compatible React plugin, instead of the unsupported Vite 5 line. Recheck the [Vite support policy](https://vite.dev/releases), [Node requirement](https://vite.dev/guide/), and [typescript-eslint compatibility](https://typescript-eslint.io/users/dependency-versions/) when changing the preset; verify a fresh install, lint, and build. A newer major alone does not justify migrating an existing application. New Supabase clients use a [publishable key](https://supabase.com/docs/guides/getting-started/api-keys); preserve legacy variable names when maintaining an existing project, and never put secret/service-role keys in browser code.

@@ -1,6 +1,6 @@
 ---
 name: v-git
-description: "Draft a short commit message in Veer's format or execute an explicitly requested commit and push. Use for write commit message, summarize my git changes, git and push, commit and push, or push it. Personal projects use main directly; open-source and NGO data work follow their contribution workflow."
+description: "Draft a single commit message in Veer's format, or perform an explicitly requested commit and push using the verified repository, intended changes, and personal-main or contribution workflow."
 ---
 
 # Git Commit Message Draft
@@ -16,19 +16,11 @@ description: "Draft a short commit message in Veer's format or execute an explic
 
 Use this skill for a fast commit-message draft or an explicitly requested commit/push operation from the repo's current Git state.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and execution
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
+Inspect staged, unstaged, and untracked changes and read the relevant diff before writing a message. Commit only the intended files or hunks; preserve unrelated changes and verify the staged diff before committing.
 
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Exhaust the search.** For discovery, keep going until two consecutive passes surface nothing new; do not stop at the first plausible batch. Never silently cap coverage — state what you skipped and why.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
+Resolve bundled `scripts/` and `references/` from the directory containing this `SKILL.md`, and pass the target repository explicitly. If a helper cannot run, inspect the relevant source directly and state the remaining verification gap. Stop after the requested deliverable and applicable checks are complete.
 
 ## Quick flow
 
@@ -46,22 +38,24 @@ Run this skill in your highest-effort mode, whatever model you are. Prefer corre
 
 ## Execution versus draft output
 
-When the user requests a commit/push operation, execute it under the policy above and briefly report the actual commit and push result. The fenced-block contract below applies only when the user asks for a draft or paste-ready commands. Before committing, prepare or verify the selected branch. With a clean working tree, skip the commit and push any intended existing commits; do not manufacture an empty commit. Examples below assume a personal project already on `main`; use the correct contribution branch/remote for exceptions.
+Before committing, verify both effective author and committer are `virajparmaj <viraj.parmaj89@gmail.com>`. Use the existing GitHub authentication and omit AI attribution. Preserve unrelated staged changes; stage only intended paths/hunks and review `git diff --cached` before each commit. Quote shell paths and message text safely, including literal `$`, backticks, and quotes.
+
+When the user requests a commit/push operation, execute it under the policy above and briefly report the actual commit and push result. The fenced-block contract below applies only when the user asks for a draft or paste-ready commands. Before committing, prepare or verify the selected branch. With a clean working tree, skip the commit and push any intended existing commits; do not manufacture an empty commit. Examples below assume a personal project already on `main` with `origin` verified as its push remote; substitute the actual configured push remote, and use the contribution branch/remote for exceptions.
 
 ## Output contract (drafts)
 
 - Output one fenced `bash` code block with this exact structure:
-  1. `git add .` (blank line after)
+  1. `git add -- <explicit intended paths>` (blank line after); use `git add .` only when every change is intended for this commit
   2. `git commit -m "<type> : <short summary 4-5 words max>" \` followed by a single `-m` containing all change groups as `- ` prefixed lines in one multiline string (closing `"` on the last bullet line)
   3. (blank line after the commit block)
-  4. `git push origin main` for personal projects, or one push to the verified contribution branch/remote for an exception
+  4. `git push <verified-push-remote> main` for personal projects, or one push to the verified contribution branch/remote for an exception
 - Each bullet = one change group (≤6 words, rough grammar OK). All bullets go in one `-m` — no separate `-m` per bullet.
 - All content lives inside the code block — no bullets or text outside.
 - Do not add any other text outside the code block.
 
 Example structure:
 ```bash
-git add .
+git add -- src/auth.ts src/auth.test.ts
 
 git commit -m "feat : add auth module" \
   -m "- JWT token generation
@@ -83,16 +77,7 @@ git push origin main
 
 ## Empty repo changes
 
-For a draft-only request, if no staged, unstaged, or untracked changes exist, return:
-
-```bash
-git add .
-
-git commit -m "chore : no changes detected" \
-  -m "- nothing to commit"
-
-git push origin main
-```
+For a draft-only request with no changes, say `No changes to commit.` Do not emit a failing commit command or an empty commit. If a push was requested, inspect and push any intended existing commits under the policy above.
 
 ## Monorepo and scope support
 

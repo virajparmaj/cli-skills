@@ -4,7 +4,7 @@ You are diagnosing a pasted error and fixing it with the smallest viable edit. T
 
 ## The one hard rule
 
-**If a stack trace, build error, or file:line frame is present, DO NOT ask clarifying questions.** Diagnose and fix. The trace already contains the information. Only ask a question when the pasted text has no frame, no error code, and no recognizable signature — and even then ask exactly one, then stop.
+Begin diagnosis from the supplied error without a confirmation step. Preserve explicit explanation-only/review-only scope. Ask one targeted question only when a fact necessary to finish cannot be established from the trace or source; continue independent diagnosis.
 
 ## Step 0: Run the locator
 
@@ -25,7 +25,7 @@ It prints, in order:
 - `resolved repo frames` — frames mapped to real files in this repo (build/dep noise dropped)
 - per top frame: `±15 lines of context` with the offending line marked `>>`, plus `git recency` (who last touched that line and when) and the file's last commit
 
-The top resolved frame is almost always the root-cause site. Dependency frames (`node_modules/`, `site-packages/`, `dist/`) are shown as unresolved on purpose — they are rarely the fix site.
+The top resolved frame identifies where the failure surfaced; trace relevant callers, inputs, and configuration before choosing the fix site. Dependency frames (`node_modules/`, `site-packages/`, `dist/`) are shown as unresolved on purpose — they are rarely the fix site.
 
 ## Step 1: Confirm the family from code
 
@@ -63,7 +63,7 @@ If the fix genuinely requires touching more than one file (e.g. a type and its c
 
 ## Step 4: Emit the strict output contract
 
-Return exactly these four sections, in this order, and nothing before them:
+Return the four sections from SKILL.md, including the concrete trigger, F x I score with reasons, and observed verification result. The compact example below shows the shape:
 
 ```
 DIAGNOSIS: <one sentence — what is failing, in plain terms>
@@ -76,8 +76,8 @@ Rules for the four sections:
 
 - **DIAGNOSIS** is one sentence, no jargon dump. What broke, at what layer.
 - **ROOT CAUSE** must carry a `file:line` (or `file` + named one-hop file if strongly inferred) and the evidence label. No label = not shippable.
-- **SMALLEST FIX** describes the edit you *applied* — actually make the edit with the editor, do not just propose it. If you truly cannot edit (read-only mount, ambiguous target), say so and give the exact patch.
-- **VERIFY** is exactly one command, chosen for the family (see below). Not a paragraph, not a checklist — one command.
+- **SMALLEST FIX** reports the applied authorized change, or review-only/deferred status. If an authorized edit is blocked, say why and give the exact patch.
+- **VERIFY** gives the narrow reproducer and its result, with a short summary of any required repository checks. Run checks where practical; identify checks that could not run.
 
 After the four sections you may add at most one line flagging a separate latent issue you noticed. Nothing else.
 
@@ -89,7 +89,7 @@ After the four sections you may add at most one line flagging a separate latent 
 | vite-rollup-build | `npm run build` |
 | react-runtime | `npm run dev` then reproduce the interaction (state the interaction) |
 | vercel-deploy | `vercel build` locally, or `npm run build` if the failing step was the build command |
-| python-fastapi-traceback | re-run the failing call, e.g. `uvicorn backend.api:app --reload` then hit the route; or `python -m py_compile <file>` for a syntax/import error |
+| python-fastapi-traceback | re-run the failing call, e.g. `uvicorn backend.api:app --reload` then hit the route; or `python -m py_compile <file>` for a syntax error; exercise the actual import for an import error |
 | supabase | re-run the query/mutation; for RLS, `select` as the affected role, or check the policy in `supabase/migrations/` |
 
 Prefer the narrowest command that reproduces the original failure. A type error gets `tsc --noEmit`, not the full test suite.

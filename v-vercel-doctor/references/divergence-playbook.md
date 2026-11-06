@@ -122,9 +122,11 @@ Then set `ALLOWED_ORIGINS` on the backend host (e.g. Render) to the production V
 
 ## Assembling the report
 
-1. One divergence table, rows sorted P0 → P2. Columns exactly: `Severity | Symptom | Evidence (file:line) | Local value | Vercel value | Smallest fix`.
+1. One divergence table, rows sorted P0 → P2. Use the SKILL.md table columns, including concrete trigger and frequency x impact score with rating reasons.
 2. Put the confidence label (`Confirmed from code` / `Strongly inferred`) inside the Symptom cell.
 3. For any culprit with no problem, add one line under the table: `Clean: <culprit> — <why>` (e.g. `Clean: vercel.json — SPA rewrite present`).
-4. One fenced `bash` block with the exact fix commands for every P0/P1 row, in dependency order (link/env first, then rebuild). Secrets are added via `vercel env add` prompts, never echoed.
+4. One fenced `bash` block with the fix commands for verified in-scope rows meeting the score threshold, in dependency order (link/env first, then rebuild). Secrets are added via `vercel env add` prompts, never echoed.
 5. If the CLI was not authed, make `vercel link` the first command so a re-run confirms env findings against Production.
 6. Nothing outside the table, the `Clean:` lines, and the fix block.
+
+Environment listings verify key presence, not values. Treat unavailable production configuration as unverified. A local missing key or Vite chunk-size warning alone is not proof of production failure; confirm the deployed behavior before assigning a defect.

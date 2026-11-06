@@ -1,25 +1,17 @@
 ---
 name: v-notes
-description: "Generate a repo-specific `notes/` documentation set by inspecting real code, routes, APIs, auth, database, env, and deployment files before writing. Use when asked to document a project, create `notes/00-13`, map architecture and user flows, assess auth/database status, or produce high-signal onboarding docs for future AI agents. Enforces evidence labels (`Confirmed from code`, `Strongly inferred`, `Not found in repository`), creates empty files only when explicitly not needed, and summarizes what exists vs missing. Trigger phrases: create notes folder, document this repo, map pages and routes, write architecture notes, generate prompt context, audit auth/db docs." 
+description: "Generate the canonical notes/00-13 documentation from verified repository code, routes, APIs, auth, data, and deployment behavior. Use v-notes-update to refresh existing notes."
 ---
 
 # Repo Notes Generator
 
 Use this skill when the user wants high-quality project notes generated from code evidence.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and execution
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
+Use discovery output to choose source files, then verify behavior in code. Separate implemented, mocked, and planned behavior; retain evidence labels in the notes without exposing secret values.
 
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Exhaust the search.** For discovery, keep going until two consecutive passes surface nothing new; do not stop at the first plausible batch. Never silently cap coverage — state what you skipped and why.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
+Resolve bundled `scripts/` and `references/` from the directory containing this `SKILL.md`, and pass the target repository explicitly. If a helper cannot run, inspect the relevant source directly and state the remaining verification gap. Stop after the requested deliverable and applicable checks are complete.
 
 ## CRITICAL constraints
 

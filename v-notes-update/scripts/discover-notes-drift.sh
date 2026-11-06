@@ -2,6 +2,11 @@
 
 set -euo pipefail
 
+if ! command -v rg >/dev/null 2>&1; then
+  echo "Error: ripgrep (rg) is required for discovery; no scan performed." >&2
+  exit 1
+fi
+
 usage() {
   echo "Usage: $0 /absolute/path/to/repo" >&2
   exit 1
@@ -58,15 +63,13 @@ contains() {
 }
 
 append_once() {
+  # The only destination is impacted; avoid Bash 4.3 namerefs on macOS Bash 3.2.
   local value="$1"
-  shift
-  local -n arr_ref="$1"
-  for existing in "${arr_ref[@]:-}"; do
-    if [ "$existing" = "$value" ]; then
-      return
-    fi
+  local existing
+  for existing in "${impacted[@]:-}"; do
+    if [ "$existing" = "$value" ]; then return; fi
   done
-  arr_ref+=("$value")
+  impacted+=("$value")
 }
 
 section "Repo"
@@ -118,12 +121,19 @@ fi
 section "Changed files (git working tree)"
 changed=()
 if is_git_repo; then
-  while IFS= read -r line; do
-    [ -z "$line" ] && continue
-    file_path="${line:3}"
+  while IFS= read -r -d '' entry; do
+    file_path="${entry:3}"
     changed+=("$file_path")
-    printf '%s\n' "$file_path"
-  done < <(git -C "$repo" status --porcelain)
+    printf '%q\n' "$file_path"
+    # -z porcelain emits destination first, then the original name for a rename.
+    case "${entry:0:2}" in
+      *R*|*C*)
+        IFS= read -r -d '' old_path || true
+        changed+=("$old_path")
+        printf '%q\n' "$old_path"
+        ;;
+    esac
+  done < <(git -C "$repo" status --porcelain=v1 -z --untracked-files=all)
 
   if [ "${#changed[@]}" -eq 0 ]; then
     echo "(no local changes)"

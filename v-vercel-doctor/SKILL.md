@@ -1,6 +1,6 @@
 ---
 name: v-vercel-doctor
-description: "Diagnose why a Vite/React app works locally but breaks on Vercel by finding the exact divergence. Use for React 18 + Vite + TS + Tailwind + shadcn frontends on Vercel, optionally with Supabase or a FastAPI backend on Render. Runs scripts/vercel-divergence.sh to gather evidence for the four recurring culprits: env-var mismatch (code VITE_*/process.env keys vs .env* vs `vercel env ls`), vercel.json config (missing SPA rewrite, headers, function settings), chunks over 500kB from the build, and hardcoded localhost/backend URLs plus CORS origins that only work locally. Produces a severity-ranked divergence table (P0-P2) with symptom, evidence file:line, local vs Vercel value, and smallest fix, then a fenced bash block of fix commands. Trigger phrases: works locally but not on vercel, vercel deploy is broken, why is the deployed site failing, 404 on refresh on vercel, check env vars against vercel, CORS error only in production. For frontend perf use v-frontend; for launch readiness use v-production."
+description: "Diagnose a Vite/React app that works locally but fails on Vercel by comparing environment keys, routing/build config, assets, URLs, and CORS. Review-only unless fixes are requested."
 ---
 
 # Vercel Divergence Doctor
@@ -8,7 +8,7 @@ description: "Diagnose why a Vite/React app works locally but breaks on Vercel b
 ## Practical review and implementation
 
 - Do not design for rare or future cases nobody asked about.
-- For each bug, report **frequency (1-10)** in current usage, **impact (1-10)**, **frequency x impact = score**, and the reachable trigger with evidence. Keep confidence separate from occurrence frequency; hypothetical future requirements are not bugs. Checklist examples are inspection prompts, not automatic findings or severity assignments.
+- For each bug, report **frequency (1-10)** in current usage, **impact (1-10)**, **frequency x impact = score**, and the reachable trigger with evidence. Briefly justify both ratings from current usage and the observed consequence. Keep confidence separate from occurrence frequency; hypothetical future requirements are not bugs. Checklist examples are inspection prompts, not automatic findings or severity assignments.
 - Default fix threshold: **5**, unless the user explicitly changes it. **Below 5:** record one deduplicated backlog issue and leave the code alone; use **Deferred issues** in the review if no backlog exists or remote issue creation is not already authorized. Do not block completion or reopen the same issue without new evidence or an explicit request.
 - **5 or above:** propose the smallest verified fix; implement only within the authorized task. Review-only work stays review-only. Preserve existing report structure and add the scores to each finding. Required checks and explicitly requested fixes still apply.
 - Pass evidence, scores, threshold, and deferrals to the fixer. Stop after the requested scope is covered and required checks pass; re-review affected paths only when changes, failures, or unresolved evidence justify it.
@@ -17,21 +17,13 @@ Diagnose why a Vite/React app works on `localhost` but breaks on Vercel, and han
 
 Stay in review mode. Do not edit files unless the user explicitly asks for fixes — the deliverable is a divergence table plus a copy-paste fix block, not code changes.
 
-This skill is a **diagnostic**: it does not audit for quality (use `v-frontend` for perf, `v-production` for launch readiness). It only explains local-vs-Vercel divergence and how to close it.
+This skill is a **diagnostic**: it does not audit for quality (use `v-frontend` for perf, `v-vibe-app` for launch readiness). It only explains local-vs-Vercel divergence and how to close it.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and execution
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
+Compare the deployed project and environment with the actual local configuration. Missing local declarations, a bundle warning, or a scanner hit alone does not establish a production defect; distinguish measured facts from unavailable remote evidence.
 
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Bound the review.** Cover the requested scope and verify plausible findings. Stop once that scope is covered and required checks pass; expand or repeat only for changed code, failed checks, or unresolved evidence. State coverage gaps; do not chase speculative cases to fill a report.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
+Resolve bundled `scripts/` and `references/` from the directory containing this `SKILL.md`, and pass the target repository explicitly. If a helper cannot run, inspect the relevant source directly and state the remaining verification gap. Stop after the requested deliverable and applicable checks are complete.
 
 ## The four recurring culprits
 
@@ -39,7 +31,7 @@ Almost every "works locally, breaks on Vercel" case is one of these. The script 
 
 1. **Env-var mismatch** — a key the code reads (`import.meta.env.VITE_*` or `process.env.*`) is set locally in `.env` but absent from Vercel Production, so it resolves to `undefined` in the deployed bundle.
 2. **vercel.json config** — a Vite SPA with client-side routing needs a catch-all rewrite; without it, deep links and refresh 404. Missing headers, function config, or wrong `outputDirectory` also diverge.
-3. **Chunks over 500kB** — an oversized bundle that Vite warns about locally can time out, blank-screen, or trip Vercel limits in production.
+3. **Bundle delivery** — measure emitted chunk sizes and inspect failed requests or runtime evidence. A Vite 500kB warning alone does not prove a timeout, blank screen, or Vercel deployment limit.
 4. **Hardcoded URLs / CORS** — a `localhost:8000` base URL or a CORS allow-list that omits the Vercel prod and preview domains works locally but is blocked in the browser after deploy.
 
 ## Quick flow
@@ -63,25 +55,25 @@ Almost every "works locally, breaks on Vercel" case is one of these. The script 
 
 ## Output contract (strict)
 
-Emit exactly two things, in this order:
+Emit the diagnosis table and any verified fix commands in this order; add concise deferral or verification-gap lines when needed:
 
 **A. Divergence table** — one Markdown table, most severe first, columns exactly:
 
-| Severity | Symptom | Evidence (file:line) | Local value | Vercel value | Smallest fix |
-| --- | --- | --- | --- | --- | --- |
+| Severity | Symptom / trigger | Evidence (file:line) | Local value | Vercel value | Frequency x impact = score (reasons) | Smallest fix |
+| --- | --- | --- | --- | --- | --- | --- |
 
 - Severity is `P0` (site broken / blank / core flow dead in prod), `P1` (a feature silently fails or a route 404s), or `P2` (works but fragile: oversized chunk, wildcard CORS, unpinned config).
 - Label each row `Confirmed from code` or `Strongly inferred` in the Symptom cell.
-- "Vercel value" is the actual value if `vercel env ls` ran, otherwise the strongly-inferred value (e.g. `undefined — key absent from Production`).
+- `vercel env ls` establishes key names and environments, not decrypted values. Report presence/absence only when that listing was verified; otherwise write `not verified`. A missing local declaration does not establish a missing Production key. Never print secret values.
 - If a culprit is clean, do not invent a row — instead list it under a short "Clean" line beneath the table (e.g. "Clean: SPA rewrite present; no chunks over 500kB").
 
-**B. Fix commands** — a single fenced ```bash``` block with the exact, ordered commands to close every P0/P1 row: `vercel env add KEY production`, the `manualChunks` snippet for `vite.config.ts`, the `vercel.json` rewrite/header block, the CORS origin edit. Real values only; do not print secret values — use `vercel env add KEY production` (which prompts) rather than echoing the secret. Put nothing outside the table and this block except the one "Clean:" line.
+**B. Fix commands** — a single fenced ```bash``` block with the exact, ordered commands for verified in-scope rows meeting the score threshold: `vercel env add KEY production`, the `manualChunks` snippet for `vite.config.ts`, the `vercel.json` rewrite/header block, the CORS origin edit. Real values only; do not print secret values — use `vercel env add KEY production` (which prompts) rather than echoing the secret. Include concise `Deferred issues` and verification-gap lines when needed by the practical review policy. Keep code/config examples in their correct language fences rather than presenting JSON or TypeScript as executable bash.
 
 ## Edge cases
 
 - **Not a Vite/Vercel repo** (no `package.json`, no `vercel.json`, no `vite.config.*`): say so and stop — this skill only diagnoses Vite/React → Vercel divergence.
 - **No divergence found**: return the table header, a single row-less "Clean:" line covering all four culprits, and skip the fix block. Do not manufacture findings.
-- **Vercel CLI not authed / project not linked**: the script prints a notice instead of the env list. Report env findings as `Strongly inferred` (code keys missing from local `.env*`), and put `vercel link` as the first fix command so a re-run can confirm against Production.
+- **Vercel CLI not authed / project not linked**: the script prints a notice instead of the env list. Report remote configuration as unverified; local key absence is not a production finding. Suggest the appropriate read-only listing or dashboard check. Run `vercel link` only when linking the chosen project is authorized.
 - **Build not run** (`--build` omitted): report chunk sizes only if a prior `dist/` exists; otherwise flag chunk analysis as "not measured — re-run with --build" rather than guessing.
 
 See [references/divergence-playbook.md](references/divergence-playbook.md) for the per-culprit evidence guide, severity rubric, and ready-to-paste fix snippets.

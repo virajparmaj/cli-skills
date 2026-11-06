@@ -5,7 +5,7 @@ How to insert captured screenshots into the README without disturbing structure 
 ## What this step does and does not touch
 
 - DOES: replace screenshot placeholders and stale image paths with the fresh files.
-- DOES NOT: rewrite headings, feature copy, install instructions, or badges. For README structure use v-readme-app / v-readme-web first, then this skill to fill the gaps they leave.
+- DOES NOT: rewrite headings, feature copy, install instructions, or badges. For README structure use v-readme first, then this skill to fill the gaps they leave.
 - Preserve any top-of-README logo/branding block exactly where it is. Never move or replace the header logo with a route screenshot.
 
 ## Anchor patterns to look for

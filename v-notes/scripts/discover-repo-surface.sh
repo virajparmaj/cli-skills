@@ -2,6 +2,11 @@
 
 set -euo pipefail
 
+if ! command -v rg >/dev/null 2>&1; then
+  echo "Error: ripgrep (rg) is required for discovery; no scan performed." >&2
+  exit 1
+fi
+
 usage() {
   echo "Usage: $0 /absolute/path/to/repo" >&2
   exit 1
@@ -61,13 +66,13 @@ search_files() {
   tmp="$(mktemp)"
 
   rg -n --hidden \
-    --glob '!node_modules/**' \
+    --glob '!**/node_modules/**' \
     --glob '!dist/**' \
     --glob '!.git/**' \
-    --glob '!.venv/**' \
-    --glob '!coverage/**' \
+    --glob '!**/.venv/**' \
+    --glob '!**/coverage/**' \
     --glob '!.next/**' \
-    --glob '!build/**' \
+    --glob '!**/build/**' \
     "$pattern" "${targets[@]}" 2>/dev/null | sed -n '1,200p' > "$tmp" || true
 
   if [ -s "$tmp" ]; then
@@ -82,10 +87,13 @@ search_files() {
 collect_env_names() {
   local out
   out="$(rg -o --no-filename --hidden \
-    --glob '!node_modules/**' \
+    --glob '!**/node_modules/**' \
+    --glob '!**/.venv/**' \
+    --glob '!**/venv/**' \
+    --glob '!**/__pycache__/**' \
     --glob '!.git/**' \
     --glob '!dist/**' \
-    --glob '!build/**' \
+    --glob '!**/build/**' \
     --glob '!.next/**' \
     '(VITE|NEXT_PUBLIC|NUXT_PUBLIC|REACT_APP|SUPABASE|DATABASE|POSTGRES|MYSQL|MONGO|REDIS|JWT|AUTH|OPENAI|ANTHROPIC|STRIPE|SENTRY|VERCEL|NETLIFY|RENDER|CLOUDINARY|AWS)_[A-Z0-9_]+' \
     "$repo" 2>/dev/null | sort -u | sed -n '1,200p' || true)"

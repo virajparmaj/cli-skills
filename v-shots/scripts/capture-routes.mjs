@@ -10,15 +10,18 @@
 //                 (the array printed by list-routes.mjs)
 //   --mobile      also capture a 375x812 variant per route (default: desktop only)
 //   --out         output dir relative to repo (default: docs/screenshots)
+//   --wait-for    visible content selector, overridden by a route readySelector (default: body)
+//   --timeout-ms  timeout per navigation/readiness/screenshot operation (default: 30000)
 //
 // Captures ONLY routes whose kind is "public". Auth/dynamic-without-sample routes
-// are printed as SKIPPED lines and never fabricated. Full-page PNG, network-idle wait.
+// are printed as SKIPPED lines and never fabricated. Full-page PNG, explicit visible-content readiness.
 //
 // This is a generator: it WRITES PNGs into the target repo's docs/screenshots.
 // Requires Playwright: `npm i -D playwright && npx playwright install chromium`.
 
 import { readFileSync, mkdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { createRequire } from "node:module";
 
 const DESKTOP = { width: 1280, height: 800, tag: "1280x800" };
 const MOBILE = { width: 375, height: 812, tag: "375x812" };
@@ -29,13 +32,15 @@ function fail(msg, code = 1) {
 }
 
 function parseArgs(argv) {
-  const args = { repo: null, baseUrl: null, routes: null, mobile: false, out: "docs/screenshots" };
+  const args = { repo: null, baseUrl: null, routes: null, mobile: false, out: "docs/screenshots", waitFor: "body", timeout: 30000 };
   const rest = argv.slice(2);
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
     if (a === "--mobile") args.mobile = true;
     else if (a === "--base-url") args.baseUrl = rest[++i];
     else if (a === "--routes") args.routes = rest[++i];
+    else if (a === "--wait-for") args.waitFor = rest[++i];
+    else if (a === "--timeout-ms") args.timeout = Number(rest[++i]);
     else if (a === "--out") args.out = rest[++i];
     else if (!a.startsWith("--") && args.repo === null) args.repo = a;
     else fail(`unknown or misplaced argument: ${a}`);
@@ -43,6 +48,7 @@ function parseArgs(argv) {
   if (!args.repo) fail("missing <repo-path>");
   if (!args.baseUrl) fail("missing --base-url (start the dev server first)");
   if (!args.routes) fail("missing --routes <file|->");
+  if (!args.waitFor || !Number.isFinite(args.timeout) || args.timeout <= 0) fail("--wait-for needs a selector and --timeout-ms must be positive");
   return args;
 }
 
@@ -60,6 +66,9 @@ function readRoutes(routesArg) {
     fail(`--routes is not valid JSON: ${e.message}`);
   }
   if (!Array.isArray(parsed)) fail("--routes JSON must be an array");
+  const sameOriginPath = value => typeof value === "string" && value.startsWith("/") && !value.startsWith("//") && !value.includes("\\");
+  if (parsed.some(route => !route || !sameOriginPath(route.path) ||
+    (route.samplePath !== undefined && !sameOriginPath(route.samplePath)))) fail("each route and samplePath needs a same-origin absolute path beginning with one slash");
   return parsed;
 }
 
@@ -85,29 +94,38 @@ function humanSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-async function loadPlaywright() {
+async function loadPlaywright(repo) {
+  // The skill can be symlinked outside the app; resolve its installed dev dependency there.
   try {
-    const mod = await import("playwright");
-    return mod.chromium;
+    const requireFromRepo = createRequire(join(resolve(repo), "package.json"));
+    return requireFromRepo("playwright").chromium;
   } catch {
-    fail(
-      "playwright not installed. Run: npm i -D playwright && npx playwright install chromium",
-      2,
-    );
+    try {
+      return (await import("playwright")).chromium;
+    } catch {
+      fail(
+        "playwright not installed. Run: npm i -D playwright && npx playwright install chromium",
+        2,
+      );
+    }
   }
 }
 
-async function captureOne(context, baseUrl, route, viewport, outDir, slug) {
+async function captureOne(context, baseUrl, route, viewport, outDir, slug, args) {
   const page = await context.newPage();
   await page.setViewportSize({ width: viewport.width, height: viewport.height });
   const url = new URL(route.path, baseUrl).toString();
   const suffix = viewport === MOBILE ? "-mobile" : "";
   const file = join(outDir, `${slug}${suffix}.png`);
   try {
-    await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
-    // settle animations / lazy content
-    await page.waitForTimeout(600);
-    await page.screenshot({ path: file, fullPage: true });
+    const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: args.timeout });
+    if (response && response.status() >= 400) {
+      throw new Error(`HTTP ${response.status()}`);
+    }
+    // Persistent analytics/polling must not prevent capture. The reviewed route
+    // may provide a content-ready selector; body alone proves only a visible page.
+    await page.locator(route.readySelector || args.waitFor).waitFor({ state: "visible", timeout: args.timeout });
+    await page.screenshot({ path: file, fullPage: true, animations: "disabled", caret: "hide", timeout: args.timeout });
   } finally {
     await page.close();
   }
@@ -128,7 +146,7 @@ async function main() {
   const outDir = join(args.repo, args.out);
   mkdirSync(outDir, { recursive: true });
 
-  const chromium = await loadPlaywright();
+  const chromium = await loadPlaywright(args.repo);
   const browser = await chromium.launch();
   const context = await browser.newContext({ deviceScaleFactor: 2 });
 
@@ -140,7 +158,7 @@ async function main() {
   let skipped = 0;
 
   for (const route of routes) {
-    if (route.kind !== "public") {
+    if (route.kind !== "public" && !(route.kind === "dynamic" && route.samplePath)) {
       const why =
         route.kind === "auth"
           ? "requires login"
@@ -156,7 +174,7 @@ async function main() {
     try {
       const done = [];
       for (const vp of viewports) {
-        const { file, size } = await captureOne(context, args.baseUrl, target, vp, outDir, slug);
+        const { file, size } = await captureOne(context, args.baseUrl, target, vp, outDir, slug, args);
         done.push(`${file} (${size}, ${vp.tag})`);
       }
       process.stdout.write(`CAPTURED ${route.path} -> ${done.join(" | ")}\n`);

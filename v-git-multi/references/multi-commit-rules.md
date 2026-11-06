@@ -4,7 +4,7 @@
 
 Personal projects use `main` directly; do not invent a feature branch or PR. Open-source repositories/contributions and NGO data work (`/Users/veerr_89/Work/ngo/data`, remote identity `github.com/saayam-for-all/data`, including clones/worktrees) follow their contribution branch/PR workflow. Read the skill entrypoint's policy for safe branch integration. Examples assume a personal project already on `main`; substitute the verified contribution branch/remote for exceptions. If the user asks to actually commit/push, execute and report the result; this fenced-block format applies to draft requests only.
 
-Group the working tree's current changes (staged + unstaged + untracked) into not more than 7 logical commits (high number only if sensible), each in Veer's strict commit format, and emit them as one paste-ready bash sequence. This extends the single-commit contract in [v-git/references/commit-rules.md](../../v-git/references/commit-rules.md) to N commits — the per-commit title and body format is identical.
+Group the working tree's current changes (staged + unstaged + untracked) into a few coherent commits (usually 2-5), each in Veer's strict commit format, and emit them as one paste-ready bash sequence. This extends the single-commit contract in [v-git/references/commit-rules.md](../../v-git/references/commit-rules.md) to N commits — the per-commit title and body format is identical.
 
 ## Per-commit format (reused from v-git, unchanged)
 
@@ -37,23 +37,18 @@ Scoped titles are allowed when a commit is confined to one area: `feat(api) : ad
 
 Read the `=== file manifest ===` section from `scripts/cluster-git-changes.sh`. Each row is `STAGE STATUS CLASS TOPDIR PATH`. Group rows into buckets using this priority:
 
-1. **Separate by class.** Never bury docs, config, tests, or style-only churn inside a feature commit. Typical natural buckets:
-   - `feat`/`fix`/`refactor` — the `src` changes that are the point of the session
-   - `test` — files classed `test`
-   - `docs` — files classed `docs` (`.md`, `notes/`, README, CHANGELOG)
-   - `config`/`chore` — files classed `config` (lockfiles, tsconfig, vite/vercel config, `.env.example`, CI, Dockerfiles)
-   - `style` — formatting-only or `.css`/tailwind changes with no logic
-2. **Then split `src` by module** when source changes span clearly separate top-level dirs or areas (`backend/` vs `src/`, `api/` vs `frontend/`, distinct feature folders). Use scoped titles for these.
+1. **Separate independent concerns.** Split behavior changes from unrelated cleanup or documentation, rather than separating every file class automatically.
+2. **Split by module only when independent.** Separate backend and frontend work when each commit remains valid and understandable on its own.
 3. **Keep coupled files together.** A rename pair (OLD -> NEW), a component and its test, a migration and its generated types, a lockfile and the manifest that changed it — these belong in the same commit.
 4. **Order by dependency.** Emit commits so prerequisites land first:
    - config/dependency changes before source that relies on them
-   - source before its tests
+   - source and its regression tests together
    - feature/source before its docs
 5. **Cap at 5 commits.** If natural buckets exceed 5, merge the smallest related ones (e.g. fold `style` into the nearest source commit, or `config` into `chore`). Aim for 2-4 in most sessions.
 
 ## Assignment invariants (hard)
 
-- Every changed file from the manifest is assigned to **exactly one** commit — none dropped, none duplicated.
+- Every intended file or hunk is assigned once; preserve unrelated staged and unstaged changes. If one file spans concerns, use explicit hunk staging rather than staging that path twice blindly.
 - Each commit stages files with an **explicit** `git add <file list>`. Never `git add .`, never `git add -A`. A bare directory is only acceptable if every file under it belongs to that single commit.
 - Quote any path containing spaces or shell metacharacters.
 - Deletions and renames are staged with `git add <path>` too (git records removals when the path is added).
@@ -78,7 +73,7 @@ git commit -m "<type> : <summary>" \
 git push origin main
 ```
 
-- Exactly one push at the very end, after all commits: `git push origin main` for personal projects, or the verified contribution branch/remote for an exception.
+- Exactly one push at the very end, after all commits: `git push <verified-push-remote> main` for personal projects, or the verified contribution branch/remote for an exception.
 - Blank line between each `git commit` and the next `git add`.
 
 ## When NOT to split

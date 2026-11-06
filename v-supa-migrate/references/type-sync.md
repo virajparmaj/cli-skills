@@ -14,8 +14,9 @@ the web repos:
 - `src/lib/supabase.ts` — hand-maintained typed client + `Database` type (back-pack)
 - `src/types/supabase.ts` or `src/lib/database.types.ts` — occasional variants
 
-If none is found, set `types action` to `no change` and note "no typed client
-detected" — never invent a path.
+If none is found and schema shape changes, set `types action` to
+`regenerate — destination not detected`; preserve `no change` for type-neutral
+migrations only. Never invent a path.
 
 ## When to regenerate (the `types action` rule)
 
@@ -57,7 +58,7 @@ Local dev database (no remote round-trip):
 supabase gen types typescript --local > src/integrations/supabase/types.ts
 ```
 
-Substitute the real detected path as the redirect target. Do not run these as
+Substitute a verified generated-types path as the redirect target; never redirect over a client initializer such as `src/lib/supabase.ts`. Do not run these as
 part of the skill — the skill only writes the migration file and reports the
 action. Regeneration is the user's next step (it needs network/CLI auth).
 

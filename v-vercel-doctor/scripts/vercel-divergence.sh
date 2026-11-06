@@ -2,7 +2,7 @@
 #
 # vercel-divergence.sh — gather deterministic evidence for why a Vite/React app
 # works locally but breaks on Vercel. Read-only against the target repo except
-# for the optional build in a temp dir (see --build). Never edits repo files.
+# for the optional build in the target project (see --build). Build scripts may write artifacts.
 #
 # Emits four evidence blocks the model turns into a divergence table:
 #   1) env-key diff (code references vs .env* files vs `vercel env ls`)
@@ -109,7 +109,7 @@ else
 fi
 echo
 
-echo "=== env keys in code but NOT in any local .env* (likely missing on Vercel too) ==="
+echo "=== env keys in code but NOT in any local .env* (Production presence unverified) ==="
 if [ -s /tmp/.vd_code_keys.$$ ]; then
   comm -23 /tmp/.vd_code_keys.$$ /tmp/.vd_file_keys.$$ 2>/dev/null \
     | sed 's/^/MISSING_LOCALLY: /' || true
@@ -148,7 +148,7 @@ if command -v vercel >/dev/null 2>&1; then
       cat /tmp/.vd_vercel.$$
       echo
       # Extract candidate key names from the listing (first column tokens).
-      grep -oE '^[A-Za-z_][A-Za-z0-9_]*' /tmp/.vd_vercel.$$ 2>/dev/null \
+      sed -E 's/^[[:space:]]+//' /tmp/.vd_vercel.$$ | grep -oE '^[A-Za-z_][A-Za-z0-9_]*' 2>/dev/null \
         | grep -Ev '^(Vercel|Environment|Variables|name|Created|Retrieving)$' \
         | sort -u > /tmp/.vd_vercel_keys.$$ || true
       echo "--- code-referenced keys NOT found in Vercel Production ---"
@@ -189,7 +189,7 @@ if [ -f vercel.json ]; then
   done
   # SPA rewrite check: Vite SPAs need a catch-all rewrite to index.html or "/".
   if grep -Eq '"rewrites"' vercel.json 2>/dev/null; then
-    echo "SPA_REWRITE: present (good for client-side routing)"
+    echo "REWRITES_KEY: present — inspect source/destination coverage; key presence alone does not prove SPA fallback"
   else
     echo "SPA_REWRITE: MISSING — deep links / refresh on sub-routes may 404 on Vercel"
   fi
@@ -226,8 +226,18 @@ echo
 echo "=== oversized chunks (> ${chunk_kb} KB) ==="
 if [ "$do_build" -eq 1 ]; then
   if [ -f package.json ] && grep -q '"build"' package.json 2>/dev/null; then
-    echo "running build (npm run build)... this can take a minute"
-    if npm run build >/tmp/.vd_build.$$ 2>&1; then
+    # Respect the package's declared manager, then lockfile; never install tools.
+    build_runner="$(node -e '
+      const fs = require("node:fs");
+      const p = JSON.parse(fs.readFileSync("package.json", "utf8"));
+      let manager = String(p.packageManager || "").split("@")[0];
+      if (!["npm", "pnpm", "yarn", "bun"].includes(manager)) {
+        manager = [["pnpm-lock.yaml", "pnpm"], ["yarn.lock", "yarn"], ["bun.lock", "bun"], ["bun.lockb", "bun"]].find(([file]) => fs.existsSync(file))?.[1] || "npm";
+      }
+      process.stdout.write(manager);
+    ')"
+    echo "running build ($build_runner run build)... this can take a minute"
+    if "$build_runner" run build >/tmp/.vd_build.$$ 2>&1; then
       echo "build: OK"
     else
       echo "build: FAILED — a local build failure will also fail the Vercel build"

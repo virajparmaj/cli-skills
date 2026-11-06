@@ -1,25 +1,17 @@
 ---
 name: v-scaffold
-description: "Scaffolds a new project in Veer's exact stack conventions with one command, choosing a web or python track. Web track: Vite + React 18 + TypeScript strict + Tailwind + shadcn/ui, types/ directory, lib/supabase.ts typed-client stub, .env.example committed, ErrorBoundary component, and vercel.json skeleton. Python track: per-project venv on Python 3.11, pyproject with Black line-length 100 + isort, his pinned ML stack (numpy 2.1.2, pandas 2.2.3, scipy 1.14.1, scikit-learn 1.5.2, xgboost 2.1.0, statsmodels 0.14.4, matplotlib 3.9.2, seaborn 0.13.2, structlog), src/ layout, and a clean starter notebook in config->data->preprocessing->modeling order with success prints. Ends with an initial commit in his format and a strict manifest of every file created, with no extra dependencies or boilerplate. Trigger phrases: scaffold a new web app, new project in my stack, set up a python project my way, bootstrap a vite shadcn repo, new repo my conventions."
+description: "Bootstrap a new web or Python project using Veer's documented stack and bundled scaffold scripts. Use for new project setup, not changes to an existing application."
 ---
 
 # Project Scaffolder
 
 Bootstrap a new repo in Veer's documented conventions, one command, no assembling from memory.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and execution
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
+Inspect the destination before writing; preserve existing files unless overwrites were explicitly requested. Report the actual manifest and failed setup steps; do not claim dependencies or environments were installed unless verified.
 
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Exhaust the search.** For discovery, keep going until two consecutive passes surface nothing new; do not stop at the first plausible batch. Never silently cap coverage — state what you skipped and why.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
+Resolve bundled `scripts/` and `references/` from the directory containing this `SKILL.md`, and pass the target repository explicitly. If a helper cannot run, inspect the relevant source directly and state the remaining verification gap. Stop after the requested deliverable and applicable checks are complete.
 
 ## Quick flow
 
@@ -48,8 +40,8 @@ After the scaffolder runs, produce exactly two things:
 2. A **commands** block — one fenced `bash` code block the user can run as-is: the install/setup commands from the script's `=== next steps ===`, then the initial commit in Veer's exact format:
 
 ```bash
-git init
-git add .
+git init -b main
+git add -- <files from the created manifest>
 
 git commit -m "<type> : <summary 4-5 words>" \
   -m "- scaffold <web|python> project
@@ -57,6 +49,7 @@ git commit -m "<type> : <summary 4-5 words>" \
 - <notable extra, e.g. supabase client stub>"
 ```
 
+- Before any authorized commit, verify author and committer are `virajparmaj <viraj.parmaj89@gmail.com>`; preserve unrelated existing edits and omit AI attribution. Use `main` for personal projects, except an explicitly requested or contribution workflow.
 - Use `chore` as the commit type for a plain scaffold (`feat` only if the scaffold ships real user behavior).
 - Do not add files, dependencies, or config beyond what the scaffolder wrote. If more is needed, say so as a separate follow-up outside the two blocks.
 
@@ -64,8 +57,8 @@ git commit -m "<type> : <summary 4-5 words>" \
 
 - **Target directory already has files:** the scaffolder skips existing convention files by default and reports them under `=== manifest (skipped) ===`. Surface those to the user; only pass `--force` if they explicitly want overwrites.
 - **No Python 3.11 on PATH (python track):** the script writes all files but reports `venv NOT created` with the exact fix command. Relay that; do not silently proceed as if the venv exists.
-- **User names a track that already exists as its own concern:** this skill only bootstraps. For git commit wording use v-git; for de-Lovable cleanup of an existing repo use v-delovable; for a Supabase migration workflow use v-supa-migrate. State the boundary instead of duplicating those jobs.
-- **Nothing created (all skipped):** report the empty-created manifest honestly and recommend `--force` or a fresh directory rather than committing a no-op.
+- **User names a track that already exists as its own concern:** this skill only bootstraps. For git commit wording use v-git; for de-Lovable cleanup of an existing repo use v-declutter; for a Supabase migration workflow use v-supa-migrate. State the boundary instead of duplicating those jobs.
+- **Nothing created (all skipped):** report the empty-created manifest honestly and report that nothing changed; use a fresh directory or `--force` only when overwrites are explicitly requested. Do not commit a no-op.
 
 ## Boundary with other skills
 

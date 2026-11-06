@@ -1,41 +1,34 @@
 ---
 name: v-shots
-description: "Auto-capture route screenshots from a running Vite/React app and wire them into the README, closing the manual screenshot step that v-readme-app and v-readme-web always leave dangling. Discovers routes deterministically with scripts/list-routes.mjs (parses React Router config and App.tsx route elements), starts the dev server, captures each public route with Playwright at 1280x800 (plus 375x812 mobile on request) into docs/screenshots/<route-slug>.png, then patches README placeholders or stale image paths and emits a strict manifest table. Routes behind auth are listed SKIPPED with a reason, never faked. Use when asked to capture screenshots for the readme, fill in the readme screenshots, screenshot the routes, screenshot every page, refresh docs/screenshots, or wire captured images into the README. Trigger phrases: capture screenshots for the readme, fill in the readme screenshots, screenshot the routes, update docs/screenshots, add screenshots to README."
+description: "Capture real public routes of a running Vite/React app into docs/screenshots and update README image references. Use for route screenshot refreshes; use v-readme for prose and structure."
 ---
 
 # README Screenshot Generator
 
 Capture a fresh screenshot for every public route of a Vite/React app and wire the files into the README with a strict manifest.
 
-This is a **generator** that writes files: it saves PNGs under `docs/screenshots/` and edits the README. It does not restructure README prose — for that, run v-readme-app (apps) or v-readme-web (websites) first, then run this skill to fill the screenshot placeholders they leave behind.
+This is a **generator** that writes files: it saves PNGs under `docs/screenshots/` and edits the README. It does not restructure README prose — for that, run v-readme first, then run this skill to fill the screenshot placeholders they leave behind.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and execution
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
+Treat route extraction as a candidate inventory and confirm nested paths and guard behavior from router code. Inspect each captured image before wiring it into documentation; an HTTP response or existing PNG alone does not prove the intended page rendered.
 
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Exhaust the search.** For discovery, keep going until two consecutive passes surface nothing new; do not stop at the first plausible batch. Never silently cap coverage — state what you skipped and why.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
+Resolve bundled `scripts/` and `references/` from the directory containing this `SKILL.md`, and pass the target repository explicitly. If a helper cannot run, inspect the relevant source directly and state the remaining verification gap. Stop after the requested deliverable and applicable checks are complete.
 
 ## Quick flow
 
-Scripts run first to produce deterministic facts; model judgment (route classification, README wiring) comes after.
+The route scanner uses the target project’s TypeScript parser when available, with a regex fallback that emits only unverified `candidate` entries. Confirm the inventory against the actual router. Resolve relative child paths against their parents, inherited guards, index routes, and configured basenames before capture. Save the reviewed route list as JSON for the capture helper.
 
 1. Discover routes: `node scripts/list-routes.mjs <repo-path>` — parses `App.tsx` / router config into a JSON route list on stdout. Read the JSON; do not guess routes from memory.
 2. Classify each route from the JSON before capturing:
    - `public` — capture it.
    - `auth` / `protected` — mark SKIPPED (reason: requires login), never fake a placeholder image.
-   - `dynamic` (has `:param`) — capture only if the script resolved a concrete sample path, else SKIPPED (reason: needs a real param).
+   - `dynamic` (has `:param`) — supply a verified concrete `samplePath` before capture, else SKIPPED (reason: needs a real param).
+   - `candidate` — resolve the actual path, basename, and guards before explicitly reclassifying it. Static analysis cannot prove loader authentication or runtime redirects.
 3. Confirm the dev command and port. Check `package.json` scripts (`dev`), `vite.config.*` for `server.port`, and any existing `.claude/launch.json`. Start the dev server (use the preview/launch tooling or `npm run dev`) and wait until it serves.
-4. Capture: `node scripts/capture-routes.mjs <repo-path> --base-url http://localhost:<port> --routes <routes.json>` (add `--mobile` for 375x812 variants when the user asks). It writes `docs/screenshots/<route-slug>.png`, waits for network idle per route, and prints one line per capture.
+4. Capture: `node scripts/capture-routes.mjs <repo-path> --base-url http://localhost:<port> --routes <routes.json>` (add `--mobile` for 375x812 variants when the user asks). It writes `docs/screenshots/<route-slug>.png`, waits for DOM content and a visible content selector, then prints one line per capture. Set `--wait-for <selector>` or each route’s `readySelector` to identify completed page content; `body` is the fallback and does not prove data finished loading. Set `--timeout-ms <milliseconds>` when necessary.
 5. Wire the README: replace the user's screenshot-placeholder comments (e.g. `<!-- screenshot: home -->`) or stale image paths with the fresh files. Preserve any top-of-README logo/branding placement. See [references/readme-wiring.md](references/readme-wiring.md) for the exact anchor patterns and Markdown to emit.
-6. Emit the manifest table (see Output contract). Stop the dev server when done.
+6. Emit the manifest table (see Output contract). Stop only the dev server process started for this task; preserve a server that was already running.
 
 ## Output contract (strict)
 
@@ -70,8 +63,8 @@ Do not narrate the capture loop or add prose outside these two blocks.
 
 ## Scope boundary
 
-- This skill fills screenshots and wires them in. It does not rewrite README structure, feature copy, or branding — use v-readme-app / v-readme-web for that.
-- It does not test route behavior or accessibility — use the v-test-* skills.
+- This skill fills screenshots and wires them in. It does not rewrite README structure, feature copy, or branding — use v-readme for that.
+- It does not test route behavior or accessibility — use the v-test skill.
 - It captures only what a real running app renders; it never fabricates a screenshot for a route it could not load.
 
 See [references/capture-playbook.md](references/capture-playbook.md) for viewport standards, wait strategy, dev-server handling, and dynamic-route resolution.

@@ -23,6 +23,9 @@ for arg in "$@"; do
     repo_path="$arg"
   elif [[ -f "$arg" ]]; then
     error_file="$arg"
+  else
+    echo "Not a directory or readable error file: $arg" >&2
+    exit 2
   fi
 done
 
@@ -49,7 +52,7 @@ if [[ -z "${err_text// }" ]]; then
 fi
 
 cd "$repo_path"
-repo_abs="$(pwd)"
+repo_abs="$(pwd -P)"
 
 is_git=false
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -151,17 +154,19 @@ resolve_frame() {
 
   # drop build-output / dependency noise
   case "$file" in
-    *node_modules/*|*/dist/*|dist/*|*/build/*|build/*|*/.next/*|*/.vite/*|*/coverage/*)
+    *node_modules/*|*site-packages/*|*/.venv/*|*/venv/*|*/dist/*|dist/*|*/build/*|build/*|*/.next/*|*/.vite/*|*/coverage/*)
       return 1 ;;
   esac
 
-  # 1) exact / relative match
+  # Absolute local frames outside this repository are not repo source. Remote
+  # paths that do not exist locally can still be mapped by suffix below.
   candidate="${file#./}"
-  if [[ -f "$candidate" ]]; then echo "$candidate:$line"; return 0; fi
-
-  # 2) absolute path that lives under the repo
   if [[ "$file" == "$repo_abs"/* && -f "$file" ]]; then
     echo "${file#$repo_abs/}:$line"; return 0
+  elif [[ "$file" == /* && -f "$file" ]]; then
+    return 1
+  elif [[ "$candidate" != /* && "$candidate" != ../* && -f "$candidate" ]]; then
+    echo "$candidate:$line"; return 0
   fi
 
   # 3) find by basename (handles /abs, dist mapping, cwd differences)
@@ -187,6 +192,7 @@ resolve_frame() {
 
 echo "=== resolved repo frames (top $MAX_FRAMES, deduped) ==="
 resolved=""
+resolved_frames=()
 count=0
 while IFS= read -r raw; do
   [[ -z "$raw" ]] && continue
@@ -194,6 +200,7 @@ while IFS= read -r raw; do
     rfile="${r%:*}"
     if ! grep -qxF "$rfile" <<<"$resolved" 2>/dev/null; then
       resolved="$resolved"$'\n'"$rfile"
+      resolved_frames+=("$r")
       echo "  $raw  ->  $r"
       count=$((count + 1))
     fi
@@ -212,19 +219,9 @@ if [[ $count -eq 0 ]]; then
 fi
 
 # ---- 6. print context + git recency per resolved frame ---------------------
-resolved="$(sed '/^$/d' <<<"$resolved")"
-while IFS= read -r rfile; do
-  [[ -z "$rfile" ]] && continue
-  # recover the line number for this file from the resolved list order
-  ln="$(
-    while IFS= read -r raw; do
-      [[ -z "$raw" ]] && continue
-      if r="$(resolve_frame "$raw" 2>/dev/null)"; then
-        [[ "${r%:*}" == "$rfile" ]] && { echo "${r##*:}"; break; }
-      fi
-    done <<<"$frames"
-  )"
-  [[ -z "$ln" ]] && ln=1
+for resolved_frame in "${resolved_frames[@]}"; do
+  rfile="${resolved_frame%:*}"
+  ln="${resolved_frame##*:}"
 
   echo "=== frame: $rfile:$ln ==="
 
@@ -255,6 +252,6 @@ while IFS= read -r rfile; do
       || echo "  (no git history for this file)"
     echo
   fi
-done <<<"$resolved"
+done
 
 echo "=== done ==="

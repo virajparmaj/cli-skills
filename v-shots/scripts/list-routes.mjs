@@ -4,16 +4,17 @@
 // Usage:
 //   node list-routes.mjs <repo-path>
 //
-// Reads the repo's source (App.tsx, router config, *.route(s).tsx) with regex —
-// no bundler, no execution — and prints a JSON array of route objects to stdout:
-//   [{ "path": "/dashboard", "kind": "public"|"auth"|"dynamic", "source": "src/App.tsx", "reason": "..." }]
+// Parses static declarations with the target project's TypeScript parser when available.
+// Otherwise emits unverified regex candidates. Never executes application code.
+//   [{ "path": "/dashboard", "kind": "public"|"auth"|"dynamic"|"candidate", "source": "src/App.tsx", "reason": "..." }]
 //
 // Read-only. Never writes to the target repo. stdlib / Node built-ins only.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative, sep } from "node:path";
+import { join, relative, resolve, sep } from "node:path";
+import { routeParser } from "./route-ast.mjs";
 
-const repoPath = process.argv[2] || ".";
+const repoPath = resolve(process.argv[2] || ".");
 
 const SRC_DIRS = ["src", "app", "pages", "."];
 const SKIP_DIRS = new Set([
@@ -99,9 +100,6 @@ function classify(path, guardCtx) {
   const lowerPath = path.toLowerCase();
   const lowerCtx = (guardCtx || "").toLowerCase();
 
-  if (path.includes(":") || path.includes("*")) {
-    return { kind: "dynamic", reason: "path contains a route param" };
-  }
   for (const hint of AUTH_PATH_HINTS) {
     if (lowerPath.split("/").includes(hint)) {
       return { kind: "auth", reason: `path segment '${hint}' implies auth flow` };
@@ -111,6 +109,9 @@ function classify(path, guardCtx) {
     if (lowerCtx.includes(hint)) {
       return { kind: "auth", reason: `wrapped by a guard-like element (${hint})` };
     }
+  }
+  if (path.includes(":") || path.includes("*") || path.includes("?")) {
+    return { kind: "dynamic", reason: "path contains a route param" };
   }
   return { kind: "public", reason: "no auth or param signals" };
 }
@@ -182,7 +183,7 @@ function extractFromSource(src, relPath, routes) {
 
 function dedupe(routes) {
   const byPath = new Map();
-  const rank = { public: 3, dynamic: 2, auth: 1 }; // keep the most-informative classification
+  const rank = { public: 3, dynamic: 2, auth: 1, candidate: 4 }; // keep the most-informative classification
   for (const r of routes) {
     const existing = byPath.get(r.path);
     if (!existing || (rank[r.kind] || 0) < (rank[existing.kind] || 0)) {
@@ -202,6 +203,8 @@ function main() {
 
   const files = collectFiles();
   const routes = [];
+  const parseRoutes = routeParser(repoPath);
+  if (!parseRoutes) process.stderr.write("list-routes: TypeScript parser unavailable in target project; emitting unverified regex candidates. Review parents, guards, and basename before marking any candidate public.\n");
   for (const f of files) {
     let src;
     try {
@@ -209,9 +212,14 @@ function main() {
     } catch {
       continue;
     }
-    if (!src.includes("path")) continue; // cheap prefilter
+    if (!/\b(?:path|Route|useRoutes|createBrowserRouter|createHashRouter)\b/.test(src)) continue;
     const rel = relative(repoPath, f).split(sep).join("/");
-    extractFromSource(src, rel, routes);
+    if (parseRoutes) routes.push(...parseRoutes(src, rel));
+    else {
+      const candidates = [];
+      extractFromSource(src, rel, candidates);
+      routes.push(...candidates.map(route => ({ ...route, kind: "candidate", reason: "unverified regex candidate: resolve parents, guards, and basename" })));
+    }
   }
 
   const result = dedupe(routes);

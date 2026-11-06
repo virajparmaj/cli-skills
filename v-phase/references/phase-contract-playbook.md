@@ -137,7 +137,7 @@ Print a single closing line that states:
 ## Boundary with other skills
 
 - For a full architecture/maintainability sweep, use `v-vibe`.
-- For serving-side ML correctness, use `v-ml` or `v-ml-deploy`.
+- For serving-side ML correctness, use `v-ml`.
 - For writing the commit after the phase lands, use `v-git`.
 - For creating the `notes/` docs this skill reads, use `v-notes`.
   `v-phase` executes one phase contract; it does not audit the whole repo.

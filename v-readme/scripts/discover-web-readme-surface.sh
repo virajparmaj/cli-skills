@@ -34,7 +34,7 @@ find_first() {
        -path '*/.vite' -o \
        -path '*/.pytest_cache' -o \
        -path '*/__pycache__' \) -prune -o \
-    -maxdepth 3 -type f -name "$pattern" -print 2>/dev/null | sort | head -n 1
+    -maxdepth 3 -type f -name "$pattern" -print 2>/dev/null | sort | sed -n '1p'
 }
 
 print_matches() {
@@ -126,7 +126,7 @@ route_surfaces="$(find "$repo_root" \
     -name 'src/main.js' -o \
     -name 'src/main.jsx' \
   \) \
-  \) -print 2>/dev/null | sort | head -n 20)"
+  \) -print 2>/dev/null | sort | sed -n '1,20p')"
 
 ui_files="$(find "$repo_root" \
   \( -path '*/.git' -o \
@@ -151,7 +151,7 @@ ui_files="$(find "$repo_root" \
   -iname '*menu*' -o \
   -iname '*sidebar*' -o \
   -iname '*shell*' \
-  \) -print 2>/dev/null | sort | head -n 24)"
+  \) -print 2>/dev/null | sort | sed -n '1,24p')"
 
 screenshot_dirs="$(find "$repo_root" \
   \( -path '*/.git' -o \
@@ -173,7 +173,7 @@ screenshot_dirs="$(find "$repo_root" \
   -path '*/assets/screenshots' -o \
   -path '*/public' -o \
   -path '*/static' \
-  \) -print 2>/dev/null | sort | head -n 24)"
+  \) -print 2>/dev/null | sort | sed -n '1,24p')"
 
 branding_files="$(find "$repo_root" \
   \( -path '*/.git' -o \
@@ -201,7 +201,7 @@ branding_files="$(find "$repo_root" \
   -iname '*icon*.jpg' -o \
   -iname '*icon*.jpeg' -o \
   -iname '*icon*.svg' \
-  \) -print 2>/dev/null | sort | head -n 24)"
+  \) -print 2>/dev/null | sort | sed -n '1,24p')"
 
 notes_dir=""
 if [ -d "$repo_root/notes" ]; then

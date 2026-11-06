@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -51,6 +52,14 @@ STAT_KEYWORD = re.compile(
 )
 # An operator-heavy assignment is a good math candidate even without a keyword.
 OPERATOR_MATH = re.compile(r"=[^=].*[-+*/^%].*\b[A-Za-z_]\w*\b")
+
+
+def source_files(root: Path):
+    """Prune dependency/cache trees before visiting their files."""
+    for base, dirs, files in os.walk(root):
+        dirs[:] = sorted(d for d in dirs if d not in PRUNE_DIRS)
+        for name in sorted(files):
+            yield Path(base) / name
 
 
 def is_pruned(path: Path) -> bool:
@@ -122,7 +131,7 @@ def extract_equations(text: str, source: str) -> list[dict]:
 def harvest_code_lines(root: Path) -> list[dict]:
     """Return candidate math-bearing code lines across the repo."""
     hits: list[dict] = []
-    for path in sorted(root.rglob("*")):
+    for path in source_files(root):
         if not path.is_file() or is_pruned(path):
             continue
         if path.suffix not in CODE_SUFFIXES:
@@ -159,7 +168,7 @@ def gather_docs(root: Path, explicit: list[str]) -> list[Path]:
         return docs
 
     docs = []
-    for path in sorted(root.rglob("*")):
+    for path in source_files(root):
         if not path.is_file() or is_pruned(path):
             continue
         if path.suffix in MD_SUFFIXES or path.suffix == ".ipynb":
