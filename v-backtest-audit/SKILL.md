@@ -1,35 +1,22 @@
 ---
 name: v-backtest-audit
-description: "Audit a backtesting or signal-evaluation repo for the classic invalidators, ending with a verdict: results plausible / inflated / invalid. Use for DuckDB/Parquet backtest engines, quant research notebooks (funding-rate, macro-regime), pandas time-series ML, and any signal-eval layer reporting Sharpe or IC. Detects lookahead (shift(-n), centered rolling, same-bar fills), leakage (fit before the time split, target in features, shuffle=True split on datetime data), survivorship, fantasy fills (zero cost/slippage/funding), and statistical inflation (multiple testing without deflated Sharpe, autocorrelation-inflated Sharpe). Runs scanner + signal-inventory scripts, counts signals tried vs reported, computes the deflated-Sharpe threshold, then reports severity-ranked findings with fixes. Trigger phrases: audit my backtest, check for lookahead or leakage, is this backtest result real, is this Sharpe real after multiple testing, deflate my backtest results, review the backtest engine before phase sign-off."
+description: "Review backtests and signal evaluation for lookahead, leakage, execution realism, and statistical inflation. Use when validating reported strategy performance; returns a plausible, inflated, or invalid verdict."
 ---
 
 # Backtest Validity Audit
-
-## Practical review and implementation
-
-- Do not design for rare or future cases nobody asked about.
-- For each bug, report **frequency (1-10)** in current usage, **impact (1-10)**, **frequency x impact = score**, and the reachable trigger with evidence. Keep confidence separate from occurrence frequency; hypothetical future requirements are not bugs. Checklist examples are inspection prompts, not automatic findings or severity assignments.
-- Default fix threshold: **5**, unless the user explicitly changes it. **Below 5:** record one deduplicated backlog issue and leave the code alone; use **Deferred issues** in the review if no backlog exists or remote issue creation is not already authorized. Do not block completion or reopen the same issue without new evidence or an explicit request.
-- **5 or above:** propose the smallest verified fix; implement only within the authorized task. Review-only work stays review-only. Preserve existing report structure and add the scores to each finding. Required checks and explicitly requested fixes still apply.
-- Pass evidence, scores, threshold, and deferrals to the fixer. Stop after the requested scope is covered and required checks pass; re-review affected paths only when changes, failures, or unresolved evidence justify it.
 
 Decide whether a backtest's reported performance is real, inflated, or a mirage — before it drives a decision or a phase sign-off.
 
 Stay in review mode. Do not edit files unless the user explicitly asks for fixes.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and scope
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
+- Read project instructions and relevant context first. Resolve `scripts/` and `references/` from this skill's directory; run helpers with the project's interpreter. Use scanner output as leads, then verify the source, data, active configuration, and reachable trigger. Disclose checks that could not run; direct inspection can still establish independent evidence.
+- For each verified bug, give frequency **1–10** and impact **1–10**, show **frequency x impact = score**, and briefly justify both ratings. Confidence is separate from occurrence frequency. Checklist entries and statistical warning signs are inspection prompts, not automatic bugs.
+- Fix threshold: **5**, unless the user changes it. Below 5, leave code alone and record one deduplicated item in an existing authorized backlog or **Deferred issues**; do not create remote issues without authorization. At 5 or above, propose the smallest fix and implement only when the task authorizes changes. A review request stays review-only.
+- Preserve the requested report format, adding evidence and scores to findings. Pass the trigger, evidence, ratings, threshold, and deferrals to any fixer. Stop after scoped work and required checks pass; revisit only affected paths, failed checks, or unresolved evidence.
 
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Bound the review.** Cover the requested scope and verify plausible findings. Stop once that scope is covered and required checks pass; expand or repeat only for changed code, failed checks, or unresolved evidence. State coverage gaps; do not chase speculative cases to fill a report.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
+Distinguish measured or traced facts from unresolved hypotheses. Never report an audit scanner hit as proof on its own.
 
 ## Scope and boundaries
 
@@ -39,14 +26,14 @@ This is the umbrella backtest-validity skill. It covers three overlapping failur
 - **Signal-evaluation hygiene** — how many signals were tried vs reported, whether metrics are truly out-of-sample, turnover/capacity, benchmark choice.
 - **Statistical inflation** — multiple-testing exposure (deflated Sharpe), autocorrelation-inflated Sharpe, overlapping samples inflating t-stats.
 
-Boundaries: for general time-series ML pipeline correctness that is not backtest-specific, and for live model *serving* reliability, use **v-ml** / **v-ml-deploy**. For repo-wide performance and dead-code audits use **v-scripts**. This skill judges whether the *numbers* can be trusted, not deployment.
+Boundaries: for forecasting split correctness use **v-timeseries-leakage**; for live model *serving* reliability use **v-ml**. For repo-wide performance and dead-code audits use **v-scripts**. This skill judges whether the *numbers* can be trusted, not deployment.
 
 ## Quick start
 
-Run the scripts first so the leakage hits, signal counts, split dates, and the deflated-Sharpe bar are deterministic facts before any judgment. Then open the flagged files and confirm each in context.
+Run relevant scripts to gather scanner candidates and statistical estimates, then inspect the flagged files in context. Confirm the actual trial count, sample length, and annualization before interpreting thresholds.
 
 1. Read repo context if present, in this order, and skip missing files:
-   - `CLAUDE.md`
+   - `AGENTS.md` and `CLAUDE.md`
    - `README.md`
    - `notes/13_prompt_context.md`
    - `notes/03_architecture.md`
@@ -56,7 +43,7 @@ Run the scripts first so the leakage hits, signal counts, split dates, and the d
    - `scripts/scan-leakage.py <repo-path>`
    - It flags `shift(-n)`, centered rolling, bfill/interpolate, `train_test_split(shuffle=True)`, `fit_transform`/scaler-fit-before-split, target-in-features overlap, as-of-today universe, zero-cost/same-bar fills, and prints each dataset's date span next to the declared split boundaries.
 3. Run the signal inventory + multiple-testing facts:
-   - `scripts/signal-inventory.py <repo-path> [--reported-sharpe X] [--trials N]`
+   - `scripts/signal-inventory.py <repo-path> [--reported-sharpe X] [--trials N] [--n-obs T] [--periods-per-year F]`
    - It counts distinct signals defined vs metrics reported, extracts split dates, prints the deflated-Sharpe / Bonferroni threshold for N signals tried, and computes naive vs autocorrelation-adjusted Sharpe from any returns series.
 4. Classify the repo before deep analysis:
    - `vectorized-backtest` (pandas/numpy frames), `event-driven engine` (DuckDB/Parquet, per-bar loop), `notebook research`, or `signal-eval-only` (metrics reported, no full engine).
@@ -68,7 +55,7 @@ Run the scripts first so the leakage hits, signal counts, split dates, and the d
 - Cite exact file paths and line ranges for every verified finding.
 - Label each finding **Confirmed from code** (you saw the bug in context) vs **Strongly inferred** (the scanner flagged it and the surrounding logic makes it very likely, but a runtime path could exonerate it). Never blur the two.
 - Severity-rank findings P0–P3:
-  - **P0** — invalidates results: lookahead into the traded signal, `shuffle=True` split on time data, target leaking into features, zero-cost fills, a reported Sharpe that fails the deflated-Sharpe bar.
+  - **P0** — invalidates results: lookahead into the traded signal, `shuffle=True` split on time data, target leaking into features, or impossible fills. A failed statistical threshold alone does not prove a mechanical invalidator.
   - **P1** — materially inflates results: scaler/model fit before the split, in-sample metrics reported as out-of-sample, missing transaction costs, autocorrelation-inflated Sharpe with no adjustment.
   - **P2** — biases results in a knowable direction: survivorship via blanket dropna or as-of-today universe, same-bar execution without decision lag, overlapping samples inflating t-stats.
   - **P3** — hygiene/provenance: missing turnover/capacity, unstated benchmark, no split-date literals, weak data provenance.
@@ -81,7 +68,7 @@ Run the scripts first so the leakage hits, signal counts, split dates, and the d
 
 End every audit with exactly one verdict and a one-line justification tied to the findings:
 
-- **results plausible** — no P0/P1 survived; the reported Sharpe clears the deflated bar; costs and out-of-sample split are honest.
+- **results plausible** — no material invalidator was verified and supported costs/splits are honest. State missing statistical inputs; passing a threshold does not establish profitability.
 - **results inflated** — no hard invalidator, but P1/P2 issues (in-sample metrics, missing costs, autocorrelation, multiple testing) mean the true numbers are lower; state the direction and, where the scripts computed it, the deflated/adjusted re-estimate.
 - **results invalid** — at least one P0 (lookahead into the signal, leaked target, shuffled time split, fantasy fills) means the numbers do not measure what they claim; the backtest must be re-run after the fix.
 
@@ -89,6 +76,6 @@ End every audit with exactly one verdict and a one-line justification tied to th
 
 - If the scanner scans zero source files or finds no backtest, signal, or metric code, say: "No backtest or signal-evaluation code found under `<repo-path>` — nothing to audit," and stop. Do not invent findings.
 - If code exists but no datasets are present, still audit the code paths; note that date-span and returns-series facts could not be computed and mark related concerns **Strongly inferred**, not Confirmed.
-- If pandas/pyarrow are unavailable, the scripts degrade gracefully and print install hints; rely on the code-level hits and flag the missing numeric facts as a gap the developer should fill.
+- If pandas/pyarrow are unavailable, the scripts degrade gracefully and print install hints; rely on the code-level hits and report the missing numeric facts as unverified.
 
 See [references/audit-playbook.md](references/audit-playbook.md) for the full inspection checklist, severity guide, and report template.

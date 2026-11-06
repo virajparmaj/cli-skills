@@ -31,8 +31,9 @@ notebook | violation | severity | smallest fix
 - **Order drift**, **mid-notebook imports**, and **missing success prints** are
   **Strongly inferred** from headers/content heuristics; confirm by eye before
   asserting.
-- **Unseeded randomness** is Confirmed (a random call site with no seed reaching
-  it) and is the usual cause of "results changed between runs" — flag as High.
+- **Unseeded randomness** is a candidate until seed handling is traced through
+  the executed path. Shared setup or a passed generator may seed the call; rate
+  the actual reproducibility effect rather than assigning severity by pattern.
 
 ## Promotion plan
 
@@ -49,15 +50,21 @@ After the tables, emit exactly one fenced `bash` block for mechanical cleanup �
 strip outputs and (optionally) stage — nothing after it:
 
 ```bash
-# strip committed outputs from all notebooks (requires nbconvert)
+# clear outputs from the selected notebooks (requires nbconvert)
 jupyter nbconvert --clear-output --inplace notebooks/*.ipynb
 
-# or, stdlib-only strip if nbconvert is unavailable:
-# python -c "import json,glob;[open(f,'w').write(json.dumps({**json.load(open(f)),'cells':[{**c,'outputs':[],'execution_count':None} if c.get('cell_type')=='code' else c for c in json.load(open(f))['cells']]},indent=1)) for f in glob.glob('notebooks/*.ipynb')]"
+# Alternative when nbconvert is unavailable: use this skill's stdlib helper.
+# python3 "<loaded-skill-directory>/scripts/strip-outputs.py" notebooks/*.ipynb
 ```
 
 Adjust the glob to the repo's actual notebook location. If nothing needs
 cleanup, say so and skip the bash block.
+
+Use one cleanup method. The bundled helper reads and validates each notebook
+before writing, clears only code-cell outputs and execution counts, preserves
+other content and permissions, and atomically replaces changed files. Never
+open a notebook for writing before reading its JSON. Cleanup and staging remain
+separate actions; stage only when requested.
 
 ## Not this skill's job
 

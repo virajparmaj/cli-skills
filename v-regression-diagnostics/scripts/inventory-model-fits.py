@@ -24,7 +24,7 @@ SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", "build",
              "dist", ".ipynb_checkpoints"}
 
 MODELS = re.compile(r"\b(OLS|GLM|Logit|Probit|WLS|GLS|MixedLM|Poisson|"
-                    r"NegativeBinomial|QuantReg|RLM|MarkovRegression)\b")
+                    r"NegativeBinomial|QuantReg|RLM|MarkovRegression)\s*(?=\()", re.I)
 FIT_CALL = re.compile(r"\.fit\(")
 COV_TYPE = re.compile(r"cov_type\s*=\s*['\"]([A-Za-z0-9_]+)['\"]")
 DIAGNOSTICS = {
@@ -35,7 +35,7 @@ DIAGNOSTICS = {
     "ACF/PACF": re.compile(r"\b(acf|pacf|plot_acf|plot_pacf)\b"),
 }
 HYP_TESTS = re.compile(r"\b(ttest_ind|ttest_rel|ttest_1samp|mannwhitneyu|"
-                       r"wilcoxon|chi2_contingency|chisquare|f_oneway|pearsonr|spearmanr)\b")
+                       r"wilcoxon|chi2_contingency|chisquare|f_oneway|pearsonr|spearmanr)\s*(?=\()")
 SUMMARY = re.compile(r"\.summary\(\)|\.summary2\(\)|\.pvalues|\.tvalues")
 HAC = re.compile(r"HAC|Newey|maxlags")
 
@@ -64,7 +64,7 @@ def iter_sources(repo: Path):
 
 
 def analyze(path: Path, text: str) -> dict | None:
-    models = sorted(set(MODELS.findall(text)))
+    models = sorted(set(name.upper() for name in MODELS.findall(text)))
     hyp = sorted(set(HYP_TESTS.findall(text)))
     if not models and not hyp:
         return None
@@ -75,7 +75,9 @@ def analyze(path: Path, text: str) -> dict | None:
     is_timeseries = bool(re.search(r"(to_datetime|DatetimeIndex|parse_dates|resample|"
                                    r"\.shift\(|lag)", text))
     return {
-        "file": str(path.name if path.suffix == ".ipynb" else path),
+        "file": str(path),
+        "model_sites": [{"line": text.count("\n", 0, match.start()) + 1, "model": match.group(1)} for match in MODELS.finditer(text)],
+        "hypothesis_test_sites": [{"line": text.count("\n", 0, match.start()) + 1, "test": match.group(1)} for match in HYP_TESTS.finditer(text)],
         "models": models,
         "hypothesis_tests": hyp,
         "fit_calls": fits,
@@ -128,7 +130,7 @@ def main() -> int:
             if missing:
                 print(f"  diagnostics MISSING: {', '.join(missing)}")
             if r["looks_timeseries"] and not r["has_HAC"]:
-                print("  TIME SERIES without HAC/Newey-West SEs -> autocorrelated residuals likely under-corrected")
+                print("  TIME-SERIES HINT without HAC mention: inspect residual dependence and covariance choice")
         print()
     return 0
 

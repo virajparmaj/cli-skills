@@ -1,25 +1,20 @@
 ---
 name: v-backtest-report
-description: "Generate a standardized, assumption-honest backtest report from a strategy's returns file. Use for quant-finance strategy runs — funding-rate and volatility strategies, credit-risk or macro-regime backtests, or any CSV/Parquet of period returns. Deterministically computes the full metrics block (CAGR, annualized vol, Sharpe, Sortino, Calmar, max drawdown + underwater duration, VaR95/CVaR95, hit rate, turnover) via scripts/compute-metrics.py, then writes one reports/backtest-<name>.md against a strict template: strategy spec, data provenance, cost model, in/out-of-sample boundaries, computed metrics table, robustness checks, and a prioritized Known Gaps section. Every number traces to a computed value or code; anything else is labeled Strongly inferred. Trigger phrases: write the backtest report, document this strategy run, generate a report for this returns file, make the phase 10 backtest write-up. To review an existing report's correctness instead, use v-backtest-audit."
+description: "Generate a sourced strategy report from CSV or Parquet period returns, computing risk and performance metrics with explicit frequency and cost assumptions. Use to document a run; use v-backtest-audit to review validity."
 ---
 
 # Backtest Report Generator
 
 Turn a strategy's returns file into one standardized, assumption-honest backtest report where every metric is script-computed and only the judgment fields are yours to write.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and scope
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
+- Read project instructions and relevant context first. Resolve `scripts/` and `references/` from this skill's directory; run helpers with the project's interpreter. Use scanner output as leads, then verify the source, data, active configuration, and reachable trigger. Disclose checks that could not run; direct inspection can still establish independent evidence.
+- For each verified bug, give frequency **1–10** and impact **1–10**, show **frequency x impact = score**, and briefly justify both ratings. Confidence is separate from occurrence frequency. Checklist entries and statistical warning signs are inspection prompts, not automatic bugs.
+- Fix threshold: **5**, unless the user changes it. Below 5, leave code alone and record one deduplicated item in an existing authorized backlog or **Deferred issues**; do not create remote issues without authorization. At 5 or above, propose the smallest fix and implement only when the task authorizes changes. A review request stays review-only.
+- Preserve the requested report format, adding evidence and scores to findings. Pass the trigger, evidence, ratings, threshold, and deferrals to any fixer. Stop after scoped work and required checks pass; revisit only affected paths, failed checks, or unresolved evidence.
 
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Exhaust the search.** For discovery, keep going until two consecutive passes surface nothing new; do not stop at the first plausible batch. Never silently cap coverage — state what you skipped and why.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
+Compute metrics from the supplied returns and record return units, observation frequency, and risk-free convention. Distinguish computed values from interpretation; do not estimate missing metrics or modify strategy code or source data.
 
 ## Boundary
 
@@ -46,13 +41,13 @@ Run this skill in your highest-effort mode, whatever model you are. Prefer corre
 - Produce **one** report file per invocation at `reports/backtest-<strategy-name>.md`. `<strategy-name>` is a lowercase kebab slug of the strategy.
 - The file's structure must match [references/report-template.md](references/report-template.md) exactly: same H2 section order, same headings.
 - The metrics table is the script's `=== metrics markdown ===` output pasted verbatim. Every quantitative claim elsewhere in the report must reference a value from the metrics JSON or a specific line of strategy code.
-- Label provenance on each factual line: numbers straight from the script or a cited file line are `Confirmed from code`; any inference (e.g. attributing a drawdown to a regime) is `Strongly inferred`; if a fact cannot be found, write `Not found` — never invent it.
+- Label factual provenance as `Computed from returns` or `Confirmed from code`, as appropriate; any inference (e.g. attributing a drawdown to a regime) is `Strongly inferred`; if a fact cannot be found, write `Not found`.
 - The final `## Known Gaps` section is a prioritized checklist (`- [ ]` items, most launch-blocking first) in Veer's task-list style.
 - Do not add commentary, chat, or files outside the single report. See [references/metrics-glossary.md](references/metrics-glossary.md) for what each metric means and its caveats before writing the interpretation lines.
 
 ## Edge cases
 
-- **No returns / empty file:** if `scripts/compute-metrics.py` exits non-zero or finds zero observations, do not fabricate a table. Write the report with the metrics section replaced by `Not computable — no return observations in <file>` and a Known Gaps entry to supply valid returns.
+- **Metric computation fails:** do not fabricate a table. Put the actual error or missing input in the metrics section and Known Gaps. Say `no return observations` only when that is the verified cause.
 - **No weights supplied:** turnover renders as `n/a (no weights supplied)`; note in Known Gaps that turnover/transaction-cost realism is unverified.
 - **No provenance/notes:** mark data provenance fields `Not found` and add a top-priority Known Gaps item; never guess the data source or date range.
 - **Single in-sample period only:** if there is no out-of-sample split, say so explicitly in the boundaries section and flag it as a robustness gap rather than implying validation happened.

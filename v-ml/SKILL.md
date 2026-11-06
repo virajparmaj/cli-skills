@@ -1,56 +1,44 @@
 ---
 name: v-ml
-description: "Audit ML inference paths for correctness, serving reliability, and operational safety. Use for FastAPI or Python model backends with Vite, React, and TypeScript frontends, scoring endpoints, model-card services, CSV-to-score flows, fallback heuristics, multi-model routing, or demo-only apps preparing for real inference. Key capabilities include classifying inference topology (backend-only, hybrid, demo-only), tracing artifacts, loaders, endpoints, and frontend consumers, detecting training-serving feature skew, fallback divergence, preprocessing or post-processing drift, artifact path fragility, dishonest health checks, cold start, CORS, env, and dependency risks, and producing a severity-ranked audit with concrete fixes and tests. Trigger on requests like audit ML inference reliability, review scoring endpoint correctness, check model serving risks, find training-serving skew, assess demo-to-production readiness, or write an ML audit report for this repo."
+description: "Review model-serving paths for feature parity, artifact loading, fallback behavior, and inference reliability. Use for scoring endpoint or training-serving skew audits; keep findings tied to the deployed path."
 ---
 
 # ML Inference Audit
 
-## Practical review and implementation
-
-- Do not design for rare or future cases nobody asked about.
-- For each bug, report **frequency (1-10)** in current usage, **impact (1-10)**, **frequency x impact = score**, and the reachable trigger with evidence. Keep confidence separate from occurrence frequency; hypothetical future requirements are not bugs. Checklist examples are inspection prompts, not automatic findings or severity assignments.
-- Default fix threshold: **5**, unless the user explicitly changes it. **Below 5:** record one deduplicated backlog issue and leave the code alone; use **Deferred issues** in the review if no backlog exists or remote issue creation is not already authorized. Do not block completion or reopen the same issue without new evidence or an explicit request.
-- **5 or above:** propose the smallest verified fix; implement only within the authorized task. Review-only work stays review-only. Preserve existing report structure and add the scores to each finding. Required checks and explicitly requested fixes still apply.
-- Pass evidence, scores, threshold, and deferrals to the fixer. Stop after the requested scope is covered and required checks pass; re-review affected paths only when changes, failures, or unresolved evidence justify it.
-
 Stay in review mode. Do not edit files unless the user explicitly asks for fixes.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and scope
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
+- Read project instructions and relevant context first. Resolve `scripts/` and `references/` from this skill's directory; run helpers with the project's interpreter. Use scanner output as leads, then verify the source, data, active configuration, and reachable trigger. Disclose checks that could not run; direct inspection can still establish independent evidence.
+- For each verified bug, give frequency **1–10** and impact **1–10**, show **frequency x impact = score**, and briefly justify both ratings. Confidence is separate from occurrence frequency. Checklist entries and statistical warning signs are inspection prompts, not automatic bugs.
+- Fix threshold: **5**, unless the user changes it. Below 5, leave code alone and record one deduplicated item in an existing authorized backlog or **Deferred issues**; do not create remote issues without authorization. At 5 or above, propose the smallest fix and implement only when the task authorizes changes. A review request stays review-only.
+- Preserve the requested report format, adding evidence and scores to findings. Pass the trigger, evidence, ratings, threshold, and deferrals to any fixer. Stop after scoped work and required checks pass; revisit only affected paths, failed checks, or unresolved evidence.
 
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Bound the review.** Cover the requested scope and verify plausible findings. Stop once that scope is covered and required checks pass; expand or repeat only for changed code, failed checks, or unresolved evidence. State coverage gaps; do not chase speculative cases to fill a report.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
+Distinguish measured or traced facts from unresolved hypotheses. Never report an audit scanner hit as proof on its own.
 
 ## Quick start
 
 1. Inspect the repo before judging it. Read these if present, in order:
-   - `CLAUDE.md`
+   - `AGENTS.md` and `CLAUDE.md`
    - `README.md`
    - `notes/13_prompt_context.md`
    - `notes/03_architecture.md`
    - `notes/06_api_contracts.md`
    - `notes/11_known_issues.md`
    - `notes/10_deployment.md`
-   - `.env.example` or `.env`
-2. Classify the inference topology before deep analysis:
+   - `.env.example` and environment-variable names; inspect private values only if needed and never print secrets
+2. Run `python3 scripts/map_ml_repo.py /absolute/path/to/project` to map the likely ML files and feature paths before deeper inspection.
+3. Classify the inference topology before deep analysis:
    - `backend-only`
    - `hybrid`
    - `frontend-only / demo`
-3. Map the full inference path from model artifact to user-facing output. Start with:
+4. Map the full inference path from model artifact to user-facing output. Start with:
    - `backend/artifacts/`, `models/`, `*.joblib`, `*.pkl`, `*.onnx`, `*.pt`
    - FastAPI loaders and routes in `backend/*.py`
    - frontend API code in `src/services/api.ts`, `src/lib/api.ts`, or adapter files
    - feature alignment, CSV parsing, and fallback logic in `src/lib/`, `src/utils/`, `src/contexts/`, and route components
-4. Load [Audit Playbook](references/audit-playbook.md) and follow its checklist for what to inspect, how to grade severity, and how to format the report.
-5. If the repo uses a Vite + FastAPI ML stack, read [Workspace Patterns](references/workspace-patterns.md) before finalizing the audit.
+5. Load [Audit Playbook](references/audit-playbook.md) and [Audit Spec](references/audit-spec.md) and follow checklists for what to inspect, how to grade severity, and how to format the report.
+6. If the repo uses a Vite + FastAPI ML stack, read [Workspace Patterns](references/workspace-patterns.md) before finalizing the audit.
 
 ## Output rules
 
@@ -74,6 +62,6 @@ Read the matching section in [Audit Playbook](references/audit-playbook.md) when
 ## Additional checks
 
 - ONNX Runtime or TensorFlow Serving compatibility when non-joblib formats are present
-- Model A/B testing infrastructure and traffic splitting correctness
-- Data drift monitoring or concept drift detection mechanisms
+- Model A/B testing and traffic splitting correctness, if currently implemented
+- Existing data-drift monitoring where it affects the requested serving path
 - Model explainability endpoints (SHAP, LIME) if present — verify they match the production model

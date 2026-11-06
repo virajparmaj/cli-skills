@@ -26,7 +26,9 @@ Python 3.11+. Read-only except when --emit-pytest writes a test file.
 from __future__ import annotations
 
 import argparse
+import ast
 import importlib.util
+import inspect
 import json
 import math
 import os
@@ -36,6 +38,7 @@ from pathlib import Path
 
 SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", "build",
              "dist", ".mypy_cache", ".pytest_cache", ".ipynb_checkpoints"}
+_MODULE_CACHE = {}
 
 
 def _benchmarks_path() -> Path:
@@ -71,30 +74,42 @@ def iter_py_files(repo: Path):
 def discover_functions(repo: Path, aliases: set[str]) -> dict[str, tuple[Path, str]]:
     """Map alias -> (file, funcname) for the first repo definition found."""
     found: dict[str, tuple[Path, str]] = {}
-    pat = re.compile(r"^\s*def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(", re.M)
-    for py in iter_py_files(repo):
+    for py in sorted(iter_py_files(repo)):
         try:
             text = py.read_text(errors="ignore")
         except OSError:
             continue
-        for m in pat.finditer(text):
-            name = m.group(1)
+        try:
+            definitions = ast.parse(text).body
+        except SyntaxError:
+            continue
+        for node in definitions:
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            name = node.name
             if name in aliases and name not in found:
                 found[name] = (py, name)
     return found
 
 
 def load_callable(py: Path, funcname: str):
-    spec = importlib.util.spec_from_file_location(f"_vmm_{funcname}_{abs(hash(py))}", py)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"cannot load spec for {py}")
-    mod = importlib.util.module_from_spec(spec)
-    sys.path.insert(0, str(py.parent))
-    try:
-        spec.loader.exec_module(mod)  # type: ignore[union-attr]
-    finally:
-        if sys.path and sys.path[0] == str(py.parent):
+    py = py.resolve()
+    mod = _MODULE_CACHE.get(py)
+    if mod is None:
+        spec = importlib.util.spec_from_file_location(f"_vmm_{abs(hash(py))}", py)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"cannot load spec for {py}")
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = mod  # dataclasses and annotations resolve their module here
+        sys.path.insert(0, str(py.parent))
+        try:
+            spec.loader.exec_module(mod)
+        except BaseException:
+            sys.modules.pop(spec.name, None)
+            raise
+        finally:
             sys.path.pop(0)
+        _MODULE_CACHE[py] = mod
     fn = getattr(mod, funcname, None)
     if not callable(fn):
         raise AttributeError(f"{funcname} not callable in {py}")
@@ -117,7 +132,7 @@ def call_with_fixture(fn, fx: dict):
     if "returns" in inp:
         r = _as_array(inp["returns"])
         kw = {}
-        for k in ("risk_free", "periods_per_year", "ddof", "alpha", "confidence"):
+        for k in ("risk_free", "periods_per_year", "ddof", "alpha", "confidence", "mar"):
             if k in inp:
                 kw[k] = inp[k]
         attempts.append(((r,), kw, "returns+kwargs"))
@@ -125,17 +140,18 @@ def call_with_fixture(fn, fx: dict):
     if "prices" in inp:
         p = _as_array(inp["prices"])
         attempts.append(((p,), {}, "prices-only"))
-    if "y_true" in inp and "y_score" in inp:
-        yt, ys = _as_array(inp["y_true"]), _as_array(inp["y_score"])
-        attempts.append(((yt, ys), {}, "y_true,y_score"))
-        attempts.append(((ys, yt), {}, "y_score,y_true"))
+    if "y_true" in inp and ("y_score" in inp or "y_prob" in inp):
+        score_key = "y_score" if "y_score" in inp else "y_prob"
+        yt, ys = _as_array(inp["y_true"]), _as_array(inp[score_key])
+        kw = {"n_bins": inp["n_bins"]} if "n_bins" in inp else {}
+        attempts.append(((yt, ys), kw, f"y_true,{score_key}"))
     if "y_true" in inp and "y_pred" in inp:
         yt, yp = _as_array(inp["y_true"]), _as_array(inp["y_pred"])
         attempts.append(((yt, yp), {}, "y_true,y_pred"))
     if not attempts:
         # last resort: pass all list-valued inputs positionally
-        pos = tuple(_as_array(v) if isinstance(v, list) else v for v in inp.values())
-        attempts.append((pos, {}, "positional-all"))
+        scalar_inputs = {k: v for k, v in inp.items() if k != "returns_are_standard_normal_theoretical"}
+        attempts.append(((), scalar_inputs, "scalar-keywords"))
 
     last_err = None
     for pos_args, kwargs, label in attempts:
@@ -164,9 +180,9 @@ def run(repo: Path, module: Path | None):
     if module is not None:
         catalog: dict[str, tuple[Path, str]] = {}
         text = module.read_text(errors="ignore")
-        for m in re.finditer(r"^\s*def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(", text, re.M):
-            if m.group(1) in aliases:
-                catalog[m.group(1)] = (module, m.group(1))
+        for node in ast.parse(text).body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in aliases:
+                catalog[node.name] = (module, node.name)
     else:
         catalog = discover_functions(repo, aliases)
 
@@ -220,32 +236,49 @@ def print_table(rows: list[dict]) -> None:
     print(f"total {n}: " + "  ".join(f"{k}={v}" for k, v in counts.items()))
 
 
-def emit_pytest(rows: list[dict], out: Path) -> None:
+def emit_pytest(rows: list[dict], out: Path, repo: Path, overwrite: bool = False) -> None:
+    fixtures = {fixture["id"]: fixture for fixture in load_fixtures()}
     lines = [
-        '"""Auto-generated metric benchmarks (v-metric-math). Passing = code matches',
-        'the hand-computed ground truth in benchmarks.json. Regenerate, do not hand-edit."""',
+        '"""Known-answer checks against the project metric functions."""',
+        "import importlib.util",
         "import math",
+        "from pathlib import Path",
+        "import sys",
         "import pytest",
-        "",
-        "# Only fixtures that currently resolve to a repo function are emitted.",
+        "_MODULE_CACHE = {}",
         "",
     ]
+    try:
+        levels = len(out.parent.relative_to(repo).parts)
+        lines.append(f"PROJECT_ROOT = Path(__file__).resolve().parents[{levels}]")
+    except ValueError:
+        lines.append(f"PROJECT_ROOT = Path({str(repo)!r})")
+    lines.extend([inspect.getsource(fn) for fn in (load_callable, _as_array, call_with_fixture)])
     emitted = 0
     for r in rows:
-        if r["status"] in ("MISSING",):
+        if r["status"] in ("MISSING", "ERROR"):
             continue
         emitted += 1
         safe = re.sub(r"[^0-9a-zA-Z_]", "_", r["id"])
         lines.append(f"def test_{safe}():")
-        lines.append(f"    # {r['convention']}")
-        lines.append(f"    # expected {r['expected']} from fixture {r['id']}")
-        lines.append("    pytest.skip('wire this to your metric import; template from v-metric-math')")
+        path_text, function = r["file"].rsplit(":", 1)
+        source = Path(path_text)
+        try:
+            source_expr = f"PROJECT_ROOT / {str(source.relative_to(repo))!r}"
+        except ValueError:
+            source_expr = f"Path({str(source)!r})"
+        lines.append(f"    fn = load_callable({source_expr}, {function!r})")
+        lines.append(f"    fixture = {fixtures[r['id']]!r}")
+        lines.append("    observed, convention = call_with_fixture(fn, fixture)")
+        lines.append(f"    assert math.isfinite(observed), convention")
+        lines.append(f"    assert observed == pytest.approx({r['expected']!r}, abs={fixtures[r['id']].get('abs_tol', 1e-6)!r}, rel=0), convention")
         lines.append("")
     if emitted == 0:
-        lines.append("def test_no_metrics_discovered():")
-        lines.append("    pytest.skip('no metric functions discovered in repo')")
-    out.write_text("\n".join(lines) + "\n")
-    print(f"\nwrote pytest template with {emitted} cases -> {out}")
+        raise ValueError("no resolved metric functions; no test file emitted")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("w" if overwrite else "x", encoding="utf-8") as handle:
+        handle.write("\n".join(lines) + "\n")
+    print(f"wrote {emitted} executable benchmark cases -> {out}", file=sys.stderr)
 
 
 def main() -> int:
@@ -257,6 +290,7 @@ def main() -> int:
     ap.add_argument("--emit-pytest", type=Path, default=None,
                     help="write a pytest template of the resolved benchmarks")
     ap.add_argument("--json", action="store_true", help="emit raw rows as JSON")
+    ap.add_argument("--overwrite", action="store_true", help="replace the explicitly selected emitted test file")
     args = ap.parse_args()
 
     repo = Path(args.repo_path).resolve()
@@ -264,13 +298,23 @@ def main() -> int:
         print(f"no such path: {repo}", file=sys.stderr)
         return 1
 
-    rows = run(repo, args.module)
+    module = args.module if args.module is None or args.module.is_absolute() else repo / args.module
+    try:
+        rows = run(repo, module)
+    except (OSError, SyntaxError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
     if args.json:
         print(json.dumps(rows, indent=1, default=str))
     else:
         print_table(rows)
     if args.emit_pytest:
-        emit_pytest(rows, args.emit_pytest)
+        out = args.emit_pytest if args.emit_pytest.is_absolute() else repo / args.emit_pytest
+        try:
+            emit_pytest(rows, out.resolve(), repo, args.overwrite)
+        except (OSError, ValueError) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
     return 0
 
 

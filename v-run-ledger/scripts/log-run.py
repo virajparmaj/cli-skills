@@ -17,6 +17,7 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 import subprocess
 import sys
 import uuid
@@ -56,6 +57,11 @@ def ensure_ledger(path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("w", newline="") as fh:
             csv.writer(fh).writerow(FIELDS)
+    else:
+        with path.open(newline="") as handle:
+            header = next(csv.reader(handle), [])
+        if header != FIELDS:
+            raise ValueError("existing ledger schema differs; no rows appended")
 
 
 def read_rows(path: Path) -> list[dict]:
@@ -68,12 +74,25 @@ def read_rows(path: Path) -> list[dict]:
 def cmd_log(args) -> int:
     repo = Path(args.repo_path).resolve()
     path = ledger_path(repo)
-    ensure_ledger(path)
-
     try:
         params = json.loads(args.params) if args.params else {}
     except json.JSONDecodeError as exc:
         print(f"--params must be valid JSON: {exc}", file=sys.stderr)
+        return 1
+    if not isinstance(params, dict):
+        print("--params must be a JSON object", file=sys.stderr)
+        return 1
+    data_path = Path(args.data) if args.data else None
+    if data_path is not None and not data_path.is_absolute():
+        data_path = repo / data_path
+    if data_path is not None and not data_path.is_file():
+        print(f"data file not found: {data_path}", file=sys.stderr)
+        return 1
+    try:
+        digest = file_hash(data_path)
+        ensure_ledger(path)
+    except (OSError, ValueError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
         return 1
     params_json = json.dumps(params, sort_keys=True)
     params_hash = hashlib.sha256(params_json.encode()).hexdigest()[:12]
@@ -82,7 +101,7 @@ def cmd_log(args) -> int:
         "run_id": uuid.uuid4().hex[:10],
         "utc_time": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "git_sha": sha, "git_dirty": dirty,
-        "data_hash": file_hash(Path(args.data)) if args.data else "",
+        "data_hash": digest,
         "model": args.model or "",
         "params_json": params_json, "params_hash": params_hash,
         "metric_name": args.metric or "",
@@ -107,7 +126,16 @@ def cmd_best(args) -> int:
         print(f"No runs logged for metric '{args.best}'.")
         return 0
     reverse = not args.minimize
-    rows.sort(key=lambda r: float(r["metric_mean"]), reverse=reverse)
+    valid = []
+    for row in rows:
+        try:
+            if math.isfinite(float(row["metric_mean"])):
+                valid.append(row)
+        except (TypeError, ValueError):
+            pass
+    if len(valid) != len(rows):
+        print(f"Skipped {len(rows) - len(valid)} runs with invalid metric means.", file=sys.stderr)
+    rows = sorted(valid, key=lambda r: float(r["metric_mean"]), reverse=reverse)
     print(f"=== top runs by {args.best} ({'max' if reverse else 'min'} first) ===")
     for r in rows[:args.top]:
         print(f"  {r['metric_mean']:>10}  ±{r['metric_std'] or '?':<8}  "
@@ -130,6 +158,13 @@ def main() -> int:
     ap.add_argument("--minimize", action="store_true", help="with --best, lower is better")
     ap.add_argument("--top", type=int, default=10, help="with --best, how many rows")
     args = ap.parse_args()
+    if args.top < 1:
+        ap.error("--top must be positive")
+    if not args.best:
+        if not args.model or not args.metric or args.mean is None:
+            ap.error("logging requires --model, --metric, and --mean")
+        if not math.isfinite(args.mean) or (args.std is not None and (not math.isfinite(args.std) or args.std < 0)):
+            ap.error("metric mean/std must be finite and std cannot be negative")
 
     if args.best:
         return cmd_best(args)

@@ -275,8 +275,8 @@ Use when the repo serves multiple models, such as band-specific routing, ensembl
 
 - Verify each model has its own metadata file and correct feature list.
 - Check that routing logic for model selection is explicit and tested.
-- Confirm all models are loaded at startup and their combined memory footprint is at least reasoned about.
-- Look for assertion code that validates feature parity across shared paths. If equivalent guardrails are absent, consider a `P1`.
+- Check the implemented loading strategy (eager, lazy, or cached), its memory footprint, and request behavior; eager loading of every model is not a universal requirement.
+- Trace feature order and preprocessing across the active paths. Missing assertions alone do not establish a mismatch; demonstrate the input that diverges.
 
 ### Variant B: CSV upload scoring path
 
@@ -301,7 +301,11 @@ Use when the repo has mock data or no real backend.
 
 Use when reviewing `requirements.txt` or `pyproject.toml`.
 
-- All packages that touch the model artifact should be pinned exactly: `scikit-learn`, `xgboost`, `joblib`, `numpy`, `pandas`.
-- Treat unpinned model-adjacent dependencies as at least a `P2`.
+- For pickle/joblib artifacts, compare the actual serving environment with the recorded training environment. A committed lockfile or reproducible image can provide the version contract; do not require duplicate exact pins in every manifest.
+- Missing version evidence is an unverified compatibility risk. Verify the active dependency resolution and reachable artifact path before rating a bug; do not upgrade or downgrade packages during a review.
 - If the artifact was created with a known sklearn version, verify the serving environment pins that exact version.
 - Remember that `joblib` artifact loading is sklearn-version-sensitive.
+
+## Model persistence source
+
+[scikit-learn model persistence](https://scikit-learn.org/stable/model_persistence.html) documents version compatibility constraints and arbitrary-code execution risks of pickle-based loading. Inspect artifact origin and the training/serving environment; do not load an untrusted artifact merely to audit it.

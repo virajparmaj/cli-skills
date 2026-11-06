@@ -19,6 +19,7 @@ Pure stdlib, Python 3.11+. Read-only.
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 import os
@@ -75,15 +76,15 @@ def output_bytes(cell: dict) -> int:
         for key in ("text", "data"):
             val = out.get(key)
             if isinstance(val, list):
-                total += sum(len(x) for x in val if isinstance(x, str))
+                total += sum(len(x.encode("utf-8")) for x in val if isinstance(x, str))
             elif isinstance(val, dict):
                 for v in val.values():
                     if isinstance(v, list):
-                        total += sum(len(x) for x in v if isinstance(x, str))
+                        total += sum(len(x.encode("utf-8")) for x in v if isinstance(x, str))
                     elif isinstance(v, str):
-                        total += len(v)
+                        total += len(v.encode("utf-8"))
             elif isinstance(val, str):
-                total += len(val)
+                total += len(val.encode("utf-8"))
     return total
 
 
@@ -109,6 +110,16 @@ def src_code_hashes(repo: Path) -> dict[str, str]:
         if norm:
             h = hashlib.sha1(norm.encode()).hexdigest()[:12]
             out.setdefault(h, str(py.relative_to(repo)))
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            continue
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                segment = ast.get_source_segment(text, node)
+                if segment:
+                    key = hashlib.sha1(normalize_code(segment).encode()).hexdigest()[:12]
+                    out.setdefault(key, f"{py.relative_to(repo)}:{node.name}")
     return out
 
 
@@ -156,7 +167,7 @@ def scan_notebook(nb_path: Path, repo: Path, src_hashes: dict[str, str],
             elif h in seen_hashes:
                 dup_notes.append(f"cell {i} duplicates {seen_hashes[h]}")
             else:
-                seen_hashes[h] = f"{nb_path.name}:cell{i}"
+                seen_hashes[h] = f"{nb_path.relative_to(repo)}:cell{i}"
 
     ordered = [s for s in seq if s in SECTION_ORDER]
     canonical = [s for s in SECTION_ORDER if s in ordered]
@@ -214,7 +225,7 @@ def main() -> int:
         if not r["has_success_prints"]:
             print("  no end-of-block success prints (convention: print('✅ ...'))")
         if r["unseeded_rng_sites"]:
-            print(f"  UNSEEDED randomness: {', '.join(r['unseeded_rng_sites'])}")
+            print(f"  RNG sites without a seed in the same cell (trace shared setup): {', '.join(r['unseeded_rng_sites'])}")
         for d in r["duplication"]:
             print(f"  DUP: {d}")
         print()

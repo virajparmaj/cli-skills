@@ -47,16 +47,22 @@ def row_hashes(path: Path) -> set[str]:
     if HAVE_PANDAS:
         try:
             df = _read(path)
-            for _, row in df.iterrows():
-                hashes.add(hashlib.sha1(str(tuple(row.values)).encode()).hexdigest())
+            df = df.reindex(sorted(df.columns), axis=1)
+            schema = tuple(df.columns)
+            for row in df.itertuples(index=False, name=None):
+                hashes.add(hashlib.sha1(repr((schema, row)).encode()).hexdigest())
             return hashes
-        except Exception:  # noqa: BLE001
-            return hashes
+        except Exception as exc:  # noqa: BLE001
+            raise ValueError(f"cannot read split file {path}: {exc}") from exc
     if path.suffix.lower() == ".csv":
-        with path.open(newline="") as fh:
-            for row in csv.reader(fh):
-                hashes.add(hashlib.sha1(str(tuple(row)).encode()).hexdigest())
-    return hashes
+        with path.open(newline="", encoding="utf-8-sig") as fh:
+            reader = csv.DictReader(fh)
+            schema = tuple(sorted(reader.fieldnames or []))
+            for row in reader:
+                values = tuple(row.get(column) for column in schema)
+                hashes.add(hashlib.sha1(repr((schema, values)).encode()).hexdigest())
+        return hashes
+    raise ValueError(f"cannot read {path}: Parquet split checks require pandas and pyarrow")
 
 
 def _read(path: Path):
@@ -169,8 +175,14 @@ def main() -> int:
     ap.add_argument("--test", type=Path, help="test file for split-overlap check")
     args = ap.parse_args()
 
+    if bool(args.train) != bool(args.test):
+        ap.error("--train and --test must be supplied together")
     if args.train and args.test:
-        a, b = row_hashes(args.train), row_hashes(args.test)
+        try:
+            a, b = row_hashes(args.train), row_hashes(args.test)
+        except (OSError, ValueError) as exc:
+            print(f"ERROR: split overlap is unverified: {exc}", file=sys.stderr)
+            return 1
         inter = a & b
         print("=== split overlap check ===")
         print(f"train rows(hashed)={len(a)}  test rows(hashed)={len(b)}  overlap={len(inter)}")

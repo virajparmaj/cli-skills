@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
 import sys
 from pathlib import Path
 
@@ -39,21 +40,33 @@ def load_xy(path: Path, target: str, datetime_col: str | None):
         print(f"target '{target}' not in columns: {list(df.columns)}", file=sys.stderr)
         raise SystemExit(1)
     is_temporal = False
-    if datetime_col and datetime_col in df.columns:
-        df = df.sort_values(datetime_col)
+    if datetime_col:
+        if datetime_col not in df.columns:
+            raise ValueError(f"datetime column '{datetime_col}' not found")
+        parsed = pd.to_datetime(df[datetime_col], errors="raise", utc=True)
+        if parsed.isna().any():
+            raise ValueError(f"datetime column '{datetime_col}' has missing dates")
+        df = df.loc[parsed.sort_values(kind="stable").index]
         is_temporal = True
     else:
         for c in df.columns:
             if c != target and ("date" in c.lower() or "time" in c.lower()):
                 try:
-                    df = df.sort_values(c)
+                    parsed = pd.to_datetime(df[c], errors="raise", utc=True)
+                    if parsed.isna().any():
+                        continue
+                    df = df.loc[parsed.sort_values(kind="stable").index]
+                    datetime_col = c
                     is_temporal = True
                     break
                 except Exception:  # noqa: BLE001
                     pass
     y = df[target]
-    X = df.drop(columns=[target]).select_dtypes("number")
-    X = X.fillna(X.median(numeric_only=True))
+    if y.isna().any():
+        raise ValueError("target contains missing values; handle them explicitly before CV")
+    X = df.drop(columns=[target] + ([datetime_col] if datetime_col else [])).select_dtypes("number")
+    if X.shape[1] == 0:
+        raise ValueError("no numeric feature columns remain after excluding target and datetime")
     return X, y, is_temporal
 
 
@@ -61,11 +74,12 @@ def build_models(task: str):
     from sklearn.dummy import DummyClassifier, DummyRegressor
     from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
     from sklearn.linear_model import LogisticRegression, Ridge
+    from sklearn.impute import SimpleImputer
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import StandardScaler
 
     def pipe(est, scale=False):
-        steps = []
+        steps = [("impute", SimpleImputer(strategy="median"))]
         if scale:
             steps.append(("scale", StandardScaler()))
         steps.append(("est", est))
@@ -91,18 +105,24 @@ def build_models(task: str):
     return models
 
 
-def run(path: Path, target: str, datetime_col: str | None, folds: int):
+def run(path: Path, target: str, datetime_col: str | None, folds: int,
+        task: str = "auto", gap: int = 0):
     _need("sklearn")
     from sklearn.model_selection import (StratifiedKFold, TimeSeriesSplit,
                                          cross_val_score)
 
     X, y, is_temporal = load_xy(path, target, datetime_col)
-    task = "classification" if (y.nunique() <= 20 and y.dtype.kind in "biuO") else "regression"
+    from sklearn.utils.multiclass import type_of_target
+    if task == "auto":
+        kind = type_of_target(y)
+        task = "classification" if kind in {"binary", "multiclass"} and (y.nunique() <= 20 or y.dtype.kind in "bOU") else "regression"
+    if gap and not is_temporal:
+        raise ValueError("--gap requires a recognized datetime column or --datetime-col")
     scoring = "roc_auc" if (task == "classification" and y.nunique() == 2) else \
               ("accuracy" if task == "classification" else "r2")
     if is_temporal:
-        splitter = TimeSeriesSplit(n_splits=folds)
-        split_name = f"TimeSeriesSplit({folds})"
+        splitter = TimeSeriesSplit(n_splits=folds, gap=gap)
+        split_name = f"TimeSeriesSplit({folds}, gap={gap})"
     elif task == "classification":
         splitter = StratifiedKFold(n_splits=folds, shuffle=True, random_state=SEED)
         split_name = f"StratifiedKFold({folds}, shuffle, seed={SEED})"
@@ -119,8 +139,11 @@ def run(path: Path, target: str, datetime_col: str | None, folds: int):
     for name, model in build_models(task).items():
         t0 = time.perf_counter()
         try:
-            scores = cross_val_score(model, X, y, cv=splitter, scoring=scoring)
+            scores = cross_val_score(model, X, y, cv=splitter, scoring=scoring,
+                                     error_score="raise")
             dt = time.perf_counter() - t0
+            if not all(math.isfinite(float(score)) for score in scores):
+                raise ValueError("CV produced a non-finite score; model excluded from comparison")
             results[name] = (float(scores.mean()), float(scores.std()), dt)
         except Exception as exc:  # noqa: BLE001
             print(f"  {name}: ERROR {type(exc).__name__}: {exc}")
@@ -135,14 +158,14 @@ def verdict(scoring: str, results: dict) -> str:
     best, best_std = results[best_name][0], results[best_name][1]
     lift = best - dummy
     if best_name in ("dummy",):
-        return "the dummy baseline is the best model — features carry no signal under this CV"
+        return "the dummy baseline has the highest observed mean under this CV; no measured model improved on it"
     if lift <= best_std:
         return (f"best model '{best_name}' beats dummy by {lift:.4f}, within one CV std "
-                f"({best_std:.4f}) — NOT a convincing win")
+                f"({best_std:.4f}); this spread comparison is descriptive, not a significance test")
     lin = results.get("linear", (None,))[0]
     extra = ""
     if lin is not None and best_name in ("forest", "xgboost") and (best - lin) <= best_std:
-        extra = f"; but it does NOT clearly beat the linear baseline ({lin:.4f}) — prefer the simpler model"
+        extra = f"; but it does NOT clearly beat the linear baseline ({lin:.4f}); assess the simpler model against deployment requirements"
     return f"best model '{best_name}'={best:.4f} beats dummy={dummy:.4f} by {lift:.4f} (> CV std){extra}"
 
 
@@ -180,19 +203,31 @@ def main() -> int:
     ap.add_argument("target", help="target column name")
     ap.add_argument("--datetime-col", help="datetime column (forces TimeSeriesSplit)")
     ap.add_argument("--folds", type=int, default=5, help="CV folds (default 5)")
+    ap.add_argument("--task", choices=("auto", "classification", "regression"), default="auto",
+                    help="override task inference for integer-valued regression or categorical targets")
+    ap.add_argument("--gap", type=int, default=0, help="exclude this many rows between temporal train/test folds")
     ap.add_argument("--repo", type=Path, default=Path("."), help="repo root for ledger append")
     args = ap.parse_args()
+    if args.folds < 2 or args.gap < 0:
+        ap.error("--folds must be at least 2 and --gap cannot be negative")
 
     if not args.data.exists():
         print(f"no such file: {args.data}", file=sys.stderr)
         return 1
 
-    task, scoring, _split, results = run(args.data, args.target, args.datetime_col, args.folds)
+    try:
+        task, scoring, _split, results = run(args.data, args.target, args.datetime_col, args.folds,
+                                            args.task, args.gap)
+    except (ValueError, KeyError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
     print(f"{'model':10} {'mean':>10} {'std':>10} {'fit_s':>8}")
     print("-" * 42)
     for name, (mean, std, dt) in sorted(results.items(), key=lambda kv: -kv[1][0]):
         print(f"{name:10} {mean:>10.4f} {std:>10.4f} {dt:>8.2f}")
     print("\nVERDICT:", verdict(scoring, results))
+    if not results:
+        return 1
     append_ledger(args.repo.resolve(), args.data, task, scoring, results)
     return 0
 

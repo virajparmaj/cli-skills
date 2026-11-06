@@ -39,7 +39,7 @@ series, and a fit-count-vs-reported-summary proxy for p-hacking.
   diagnostic) vs **Strongly inferred** (grep signal only).
 - A missing-diagnostics checklist per model (which of Breusch-Pagan /
   Durbin-Watson / VIF / Jarque-Bera are absent).
-- Time-series regressions without HAC/Newey-West SEs are High by default.
+- Treat missing HAC or diagnostics as a lead; confirm the inference assumptions and residual behavior before rating a bug. More fitted models than summaries does not by itself establish p-hacking.
 - If the inference is sound, say so — do not invent statistical problems.
 
 ## Not this skill's job

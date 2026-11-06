@@ -89,7 +89,10 @@ def endpoints_of(rec: dict) -> tuple[object, object] | None:
 
 
 def prov_ref(rec: dict) -> object | None:
+    endpoint_fields = {key for pair in EDGE_ENDPOINTS if all(k in rec for k in pair) for key in pair}
     for f in PROV_FIELDS:
+        if f in endpoint_fields:
+            continue
         if f in rec and rec[f] not in (None, "", [], {}):
             return rec[f]
     return None
@@ -126,10 +129,12 @@ def load_json_records(path: Path) -> list[dict]:
     if isinstance(obj, list):
         return [o for o in obj if isinstance(o, dict)]
     if isinstance(obj, dict):
-        for key in ("edges", "links", "relationships", "relations", "triples"):
+        for key in ("edges", "links", "relationships", "relations", "triples", "provenance", "sources", "records"):
             val = obj.get(key)
             if isinstance(val, list):
                 return [o for o in val if isinstance(o, dict)]
+        if record_id(obj) is not None or endpoints_of(obj) is not None:
+            return [obj]
     return []
 
 
@@ -139,18 +144,20 @@ def load_csv_records(path: Path) -> list[dict]:
         return list(csv.DictReader(fh, delimiter=delim))
 
 
-def collect_prov_ids(repo: Path) -> set[str]:
+def collect_prov_ids(repo: Path) -> set[str] | None:
     """Gather provenance record ids from JSON files that look like provenance stores."""
     ids: set[str] = set()
+    store_found = False
     for path in iter_files(repo, (".json", ".jsonl", ".ndjson")):
         name = path.stem.lower()
         if not PROV_TABLE_HINT.search(name):
             continue
+        store_found = True
         for rec in load_json_records(path):
             rid = record_id(rec)
             if rid is not None:
                 ids.add(str(rid))
-    return ids
+    return ids if store_found else None
 
 
 def scan_edge_file(path: Path) -> tuple[list[dict], str] | None:
@@ -167,7 +174,7 @@ def scan_edge_file(path: Path) -> tuple[list[dict], str] | None:
     return edges, ext
 
 
-def report_edges(source: str, edges: list[dict], prov_ids: set[str]) -> dict:
+def report_edges(source: str, edges: list[dict], prov_ids: set[str] | None) -> dict:
     total = len(edges)
     sample = edges[:MAX_SAMPLE]
     missing: list[dict] = []
@@ -176,7 +183,7 @@ def report_edges(source: str, edges: list[dict], prov_ids: set[str]) -> dict:
         ref = prov_ref(e)
         if ref is None:
             missing.append(e)
-        elif prov_ids and str(ref) not in prov_ids and not isinstance(ref, (list, dict)):
+        elif prov_ids is not None and str(ref) not in prov_ids and not isinstance(ref, (list, dict)):
             unresolved.append(e)
     return {
         "source": source,
@@ -203,7 +210,7 @@ def print_report(rep: dict) -> None:
     print()
 
 
-def scan_sqlite(path: Path, prov_ids: set[str]) -> list[dict]:
+def scan_sqlite(path: Path, prov_ids: set[str] | None) -> list[dict]:
     reports: list[dict] = []
     try:
         con = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
@@ -244,7 +251,7 @@ def main() -> int:
 
     prov_ids = collect_prov_ids(repo)
     print("=== provenance store ===")
-    if prov_ids:
+    if prov_ids is not None:
         print(f"found {len(prov_ids)} provenance record ids")
     else:
         print("no provenance-id store found — refs cannot be resolved, only presence is checked")

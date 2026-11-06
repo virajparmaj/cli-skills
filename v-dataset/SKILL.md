@@ -1,6 +1,6 @@
 ---
 name: v-dataset
-description: "Pre-training dataset audit: missingness, duplicates, class imbalance, split overlap, and target leakage, plus a data-loss ledger and crypto time-series checks. Use at the start of any ML project on CSV/Parquet data (funding-rate, macro-regime, credit-risk) to enforce handle-missing-data-explicitly and no-rows-shared-across-splits. Key capabilities: profile per-column null rates, dtype anomalies, exact-duplicate rows, near-constant and id-like columns, class balance, and a feature-target association ranking that flags ~1.0 columns as candidate target leakage; sha1 row-hash overlap between train/test files; a data-loss ledger of every dropna/fillna/coerce/inner-merge/resample site with biasing operations called out; and a crypto extension checking funding-interval grid and timezone alignment. Trigger phrases: audit this dataset before training, check for leakage between my splits, profile the training data, is this data clean enough to train on, where am I silently dropping rows, check the 8h funding grid."
+description: "Review CSV or Parquet training data for missingness, duplicates, class balance, split overlap, and potential target leakage. Use for dataset readiness audits; reports measured data loss separately from code patterns."
 ---
 
 # Pre-Training Dataset Audit
@@ -9,23 +9,18 @@ Enforce clean, honest training data — explicit missingness, no duplicates, no 
 
 Stay in review mode. Do not edit files unless the user explicitly asks for fixes.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and scope
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
+- Read project instructions and relevant context first. Resolve `scripts/` and `references/` from this skill's directory; run helpers with the project's interpreter. Use scanner output as leads, then verify the source, data, active configuration, and reachable trigger. Disclose checks that could not run; direct inspection can still establish independent evidence.
+- For each verified bug, give frequency **1–10** and impact **1–10**, show **frequency x impact = score**, and briefly justify both ratings. Confidence is separate from occurrence frequency. Checklist entries and statistical warning signs are inspection prompts, not automatic bugs.
+- Fix threshold: **5**, unless the user changes it. Below 5, leave code alone and record one deduplicated item in an existing authorized backlog or **Deferred issues**; do not create remote issues without authorization. At 5 or above, propose the smallest fix and implement only when the task authorizes changes. A review request stays review-only.
+- Preserve the requested report format, adding evidence and scores to findings. Pass the trigger, evidence, ratings, threshold, and deferrals to any fixer. Stop after scoped work and required checks pass; revisit only affected paths, failed checks, or unresolved evidence.
 
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Exhaust the search.** For discovery, keep going until two consecutive passes surface nothing new; do not stop at the first plausible batch. Never silently cap coverage — state what you skipped and why.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
+Distinguish measured or traced facts from unresolved hypotheses. Never report an audit scanner hit as proof on its own.
 
 ## Quick flow
 
-1. Read repo context if present: `CLAUDE.md`, `README.md`, `notes/`, and any data dictionary.
+1. Read repo context if present: `AGENTS.md`, `CLAUDE.md`, `README.md`, `notes/`, and any data dictionary.
 2. Profile: `scripts/profile-dataset.py <repo> --target <col>` for nulls, dupes, cardinality, class balance, and the feature-target association ranking.
 3. Split overlap: `scripts/profile-dataset.py --train <a> --test <b>` for row-hash leakage between splits.
 4. Data-loss ledger: `scripts/find-silent-drops.py <repo>` for every row-affecting operation.
@@ -37,8 +32,8 @@ Run this skill in your highest-effort mode, whatever model you are. Prefer corre
 - Severity-ranked findings, each labeled **Confirmed from data** (profiler measured it) or **Strongly inferred** (code pattern only).
 - Each finding ships the one pandas snippet for its smallest fix.
 - Include a data-loss ledger table: `step | file:line | rows in→out (measured/"unmeasured") | verdict`.
-- Split-overlap leakage and ~1.0 feature-target association are P0/P1 by default.
-- Missing data that is silently dropped violates Veer's explicit-handling rule — always flag it.
+- Confirm split overlap against the intended entity/time keys and trace high feature-target association to prediction-time availability. Correlation alone does not establish leakage.
+- Report silent data loss with measured row counts or mark its effect unmeasured; distinguish intended exclusions from demonstrated bias or information loss.
 - If a dimension is clean, say so. Optionally emit a paste-ready missing-data statement for notes/README.
 
 ## Scope boundary

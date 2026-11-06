@@ -248,3 +248,7 @@ Use this when Python artifacts depend on serialized model compatibility:
 - all packages that touch the model artifact should be pinned to exact versions, especially `scikit-learn`, `xgboost`, `joblib`, `numpy`, and `pandas`
 - flag unpinned ML dependencies as an operational risk because serialization formats and feature handling drift across versions
 - when possible, verify that the runtime version matches the version used to create the artifact
+
+## Model persistence source
+
+[scikit-learn model persistence](https://scikit-learn.org/stable/model_persistence.html) documents version compatibility constraints and arbitrary-code execution risks of pickle-based loading. Inspect artifact origin and the training/serving environment; do not load an untrusted artifact merely to audit it.

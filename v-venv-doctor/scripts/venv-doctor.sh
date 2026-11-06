@@ -4,13 +4,18 @@
 #
 # Read-only. Reports: whether a project-local venv exists and is active vs the
 # global interpreter, interpreter architecture (arm64 vs x86_64 under Rosetta),
-# Python version, pip drift against requirements.txt and against the pinned ML
+# Python version, dependency drift against requirements.txt and an opt-in historical ML
 # stack, xgboost/libomp status, and packages built from sdist instead of arm64
 # wheels. The v-venv-doctor skill turns these facts into a ranked fix list.
 
 set -uo pipefail   # not -e: probes are allowed to fail and be reported
 
 repo_path="${1:-.}"
+historical_stack="${2:-}"
+if [ -n "$historical_stack" ] && [ "$historical_stack" != "--historical-stack" ]; then
+  echo "usage: $0 [repo] [--historical-stack]" >&2
+  exit 2
+fi
 cd "$repo_path" 2>/dev/null || { echo "no such path: $repo_path" >&2; exit 1; }
 repo="$(pwd)"
 
@@ -46,37 +51,73 @@ fi
 [ -z "$PY" ] && { echo; echo "no python interpreter found — stop"; exit 0; }
 
 section "interpreter arch + version"
-"$PY" - <<'PYEOF'
+"$PY" - "$repo/pyproject.toml" <<'PYEOF'
 import platform, sys
+from pathlib import Path
 print("python:", sys.version.split()[0])
 print("machine:", platform.machine())   # arm64 = native, x86_64 = Rosetta on M-series
 print("executable:", sys.executable)
 if platform.machine() != "arm64":
     print("WARNING: not arm64 — likely running under Rosetta; native arm64 is faster and avoids wheel mismatches")
-if not sys.version.startswith("3.11"):
-    print("NOTE: project standard is Python 3.11.x")
+print("Compare this version to the project's requires-python or lockfile; no global version is assumed.")
+manifest = Path(sys.argv[1])
+if manifest.is_file():
+    try:
+        import tomllib
+        try:
+            from packaging.specifiers import SpecifierSet
+        except ImportError:
+            from pip._vendor.packaging.specifiers import SpecifierSet
+        requirement = tomllib.loads(manifest.read_text()).get("project", {}).get("requires-python")
+        if requirement:
+            status = "PASS" if SpecifierSet(requirement).contains(platform.python_version(), prereleases=True) else "FAIL"
+            print(f"requires-python {requirement}: {status}")
+    except (ImportError, ValueError, OSError) as exc:
+        print(f"requires-python UNVERIFIED: {exc}")
 PYEOF
 
 section "pip drift vs requirements.txt"
 if [ -f "$repo/requirements.txt" ]; then
-  "$PY" -m pip freeze 2>/dev/null > /tmp/_vvd_freeze.txt || true
-  while IFS= read -r req; do
-    case "$req" in ""|\#*) continue ;; esac
-    name="$(printf '%s' "$req" | sed -E 's/[<>=!~].*//' | tr -d '[:space:]')"
-    [ -z "$name" ] && continue
-    have="$(grep -iE "^${name}==" /tmp/_vvd_freeze.txt || true)"
-    if [ -z "$have" ]; then
-      echo "MISSING or unpinned: $req"
-    elif [ "$(printf '%s' "$have" | tr -d '[:space:]')" != "$(printf '%s' "$req" | tr -d '[:space:]')" ]; then
-      echo "DRIFT: want '$req' have '$have'"
-    fi
-  done < "$repo/requirements.txt"
+  "$PY" - "$repo/requirements.txt" <<'PYEOF'
+import importlib.metadata as metadata
+from pathlib import Path
+import sys
+try:
+    from packaging.requirements import Requirement
+except ImportError:
+    try:
+        from pip._vendor.packaging.requirements import Requirement
+    except ImportError:
+        print("UNVERIFIED: packaging parser unavailable; compare requirements manually")
+        raise SystemExit(0)
+for line in Path(sys.argv[1]).read_text().splitlines():
+    line = line.split(" #", 1)[0].strip()
+    if not line or line.startswith("#"):
+        continue
+    try:
+        requirement = Requirement(line)
+    except ValueError:
+        print(f"UNVERIFIED requirement/directive: {line}")
+        continue
+    if requirement.marker and not requirement.marker.evaluate():
+        continue
+    try:
+        installed = metadata.version(requirement.name)
+    except metadata.PackageNotFoundError:
+        print(f"MISSING: {requirement}")
+        continue
+    if requirement.url:
+        print(f"UNVERIFIED source URL: {requirement.name} ({installed})")
+    elif requirement.specifier and not requirement.specifier.contains(installed, prereleases=True):
+        print(f"DRIFT: want '{requirement}' have '{requirement.name}=={installed}'")
+PYEOF
   echo "(blank above = in sync)"
 else
   echo "no requirements.txt in repo"
 fi
 
-section "pinned ML stack check"
+if [ "$historical_stack" = "--historical-stack" ]; then
+section "historical ML stack comparison (explicitly requested)"
 for pin in $PINNED; do
   name="${pin%%==*}"; want="${pin##*==}"
   have="$("$PY" -c "import importlib.metadata as m; print(m.version('$name'))" 2>/dev/null || echo "NOT INSTALLED")"
@@ -88,7 +129,9 @@ for pin in $PINNED; do
     echo "$name: $have OK"
   fi
 done
+fi
 
+if "$PY" -c "import importlib.util; raise SystemExit(0 if importlib.util.find_spec('xgboost') else 1)"; then
 section "xgboost / libomp smoke test (classic M1 failure)"
 "$PY" -c "import xgboost; print('xgboost import OK', xgboost.__version__)" 2>&1 | head -3 || true
 if command -v brew >/dev/null 2>&1; then
@@ -100,6 +143,9 @@ if command -v brew >/dev/null 2>&1; then
 else
   echo "brew: not found"
 fi
+else
+  printf '\nxgboost not installed; no libomp repair inferred (check project requirements above).\n'
+fi
 
 section "import smoke test (core stack)"
 "$PY" - <<'PYEOF'
@@ -107,6 +153,11 @@ for mod in ("numpy", "pandas", "scipy", "sklearn", "statsmodels"):
     try:
         __import__(mod)
         print(f"{mod}: OK")
+    except ModuleNotFoundError as exc:
+        if exc.name == mod:
+            print(f"{mod}: not installed (check project requirements; no optional package is required by this probe)")
+        else:
+            print(f"{mod}: FAIL -> {type(exc).__name__}: {exc}")
     except Exception as exc:
         print(f"{mod}: FAIL -> {type(exc).__name__}: {exc}")
 PYEOF

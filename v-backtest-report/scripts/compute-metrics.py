@@ -105,6 +105,20 @@ def _maybe_pct_scale(values: list[float], as_percent: bool) -> list[float]:
     return values
 
 
+def _parse_returns(values: list, as_percent: bool) -> list[float]:
+    """Use identical, explicit return-unit handling with either CSV loader."""
+    result = []
+    for row, value in enumerate(values, 2):
+        parsed = _to_float(value)
+        if parsed is None:
+            raise ValueError(f"Missing or non-numeric return at input row {row}; handle missing observations explicitly.")
+        # A percent suffix already carries its units; never scale it twice.
+        if as_percent and not str(value).strip().endswith("%"):
+            parsed /= 100.0
+        result.append(parsed)
+    return result
+
+
 def load_with_pandas(
     path: Path,
     date_col: str | None,
@@ -124,9 +138,9 @@ def load_with_pandas(
             "Could not find a returns column. Use --return-col to name it. "
             f"Columns seen: {headers}"
         )
-    frame = frame.dropna(subset=[rcol])
-    returns = [float(x) for x in frame[rcol].tolist()]
-    returns = _maybe_pct_scale(returns, as_percent)
+    if rcol not in headers or (dcol is not None and dcol not in headers):
+        raise ValueError(f"Requested return/date column not found; columns seen: {headers}")
+    returns = _parse_returns(frame[rcol].tolist(), as_percent)
     if dcol is not None:
         dates = [str(x) for x in frame[dcol].tolist()]
     else:
@@ -174,15 +188,14 @@ def load_with_stdlib(
                 "Could not find a returns column. Use --return-col to name it. "
                 f"Columns seen: {headers}"
             )
+        if rcol not in headers or (dcol is not None and dcol not in headers):
+            raise ValueError(f"Requested return/date column not found; columns seen: {headers}")
         dates: list[str] = []
-        returns: list[float] = []
+        raw_returns = []
         for i, row in enumerate(reader):
-            value = _to_float(row.get(rcol))
-            if value is None:
-                continue
-            returns.append(value)
+            raw_returns.append(row.get(rcol))
             dates.append(str(row.get(dcol)) if dcol else str(i))
-    returns = _maybe_pct_scale(returns, as_percent)
+    returns = _parse_returns(raw_returns, as_percent)
 
     weights_rows = None
     if weights_path is not None:
@@ -270,9 +283,11 @@ def _max_drawdown(equity: list[float]) -> tuple[float, int, int, int]:
     """Return (max_drawdown, trough_index, peak_index, longest_underwater)."""
     if not equity:
         return (0.0, 0, 0, 0)
-    peak = equity[0]
-    peak_idx = 0
-    best_peak_idx = 0
+    # Initial capital precedes the first return. A first-period loss is already
+    # underwater even if every later period recovers from that loss.
+    peak = 1.0
+    peak_idx = -1
+    best_peak_idx = -1
     max_dd = 0.0
     trough_idx = 0
     # Underwater duration: longest run below a prior peak.
@@ -315,6 +330,12 @@ def compute_metrics(
     n = len(returns)
     if n == 0:
         raise ValueError("No return observations found after parsing.")
+    if not math.isfinite(periods_per_year) or periods_per_year <= 0:
+        raise ValueError("Periods per year must be finite and greater than zero.")
+    if not math.isfinite(risk_free_annual):
+        raise ValueError("Risk-free rate must be finite.")
+    if any(not math.isfinite(r) or r < -1.0 for r in returns):
+        raise ValueError("Simple returns must be finite and at least -1.0.")
 
     mean_r = _mean(returns)
     vol_period = _std(returns, ddof=1)
@@ -322,7 +343,7 @@ def compute_metrics(
     total_return = equity[-1] - 1.0
     years = n / periods_per_year if periods_per_year > 0 else 0.0
 
-    cagr = (equity[-1] ** (1.0 / years) - 1.0) if years > 0 and equity[-1] > 0 else 0.0
+    cagr = equity[-1] ** (1.0 / years) - 1.0
     ann_vol = vol_period * math.sqrt(periods_per_year)
 
     rf_period = risk_free_annual / periods_per_year if periods_per_year > 0 else 0.0
@@ -373,7 +394,8 @@ def compute_metrics(
             series.dates[trough_idx] if series.dates else trough_idx
         ),
         "max_drawdown_peak_date": (
-            series.dates[peak_idx] if series.dates else peak_idx
+            "initial capital" if peak_idx == -1 else
+            (series.dates[peak_idx] if series.dates else peak_idx)
         ),
         "max_drawdown_underwater_periods": underwater,
         "var_95": var95,

@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import os
 import re
 import sys
 import tokenize
@@ -57,7 +58,7 @@ PATTERNS: list[tuple[str, str, str, str]] = [
     (r"train_test_split\((?![^)]*shuffle)", "P1", "default-split",
      "train_test_split defaults to shuffle=True — invalid for time series"),
     (r"\b(KFold|cross_val_score|cross_validate|StratifiedKFold)\b", "P1", "random-cv",
-     "plain KFold/cross_val shuffles folds — use TimeSeriesSplit for temporal data"),
+     "inspect the supplied splitter; ordinary KFold can train on future rows even without shuffling"),
     (r"\.fit_transform\(", "P1", "fit_transform",
      "fit_transform on the full frame fits the scaler on test data (leakage)"),
     (r"(StandardScaler|MinMaxScaler|RobustScaler|Normalizer)\(\)[^\n]*\.fit\(", "P1",
@@ -118,9 +119,17 @@ class FileResult:
     declared_dates: list[tuple[int, str, str]] = field(default_factory=list)
 
 
+def iter_repo_files(root: Path):
+    """Prune excluded trees before traversal; keep discovery deterministic."""
+    for directory, dirs, files in os.walk(root):
+        dirs[:] = sorted(d for d in dirs if d not in SKIP_DIRS)
+        for filename in sorted(files):
+            yield Path(directory) / filename
+
+
 def iter_source_files(root: Path):
     """Yield (path, is_notebook) for every *.py and *.ipynb under root, skipping junk."""
-    for path in sorted(root.rglob("*")):
+    for path in iter_repo_files(root):
         if path.is_dir():
             continue
         if any(part in SKIP_DIRS for part in path.parts):
@@ -182,7 +191,7 @@ def strip_comment(line: str) -> str:
                 break
             out.append(tok.string)
         rebuilt = "".join(out).strip()
-        return rebuilt if rebuilt else line
+        return rebuilt
     except (tokenize.TokenError, IndentationError, SyntaxError):
         return line
 
@@ -239,12 +248,12 @@ def scan_text(rel_path: str, text: str) -> FileResult:
 def find_data_files(root: Path) -> list[Path]:
     exts = {".csv", ".parquet", ".feather"}
     out = []
-    for path in sorted(root.rglob("*")):
+    for path in iter_repo_files(root):
         if path.is_dir() or any(p in SKIP_DIRS for p in path.parts):
             continue
         if path.suffix.lower() in exts and path.stat().st_size < 200_000_000:
             out.append(path)
-    return out[:50]
+    return out
 
 
 def dataset_date_span(path: Path) -> str | None:
@@ -273,8 +282,10 @@ def dataset_date_span(path: Path) -> str | None:
             except Exception:
                 continue
     # Fall back to a DatetimeIndex if the file was saved with one.
+    if not isinstance(df.index, pd.DatetimeIndex):
+        return None
     try:
-        idx = pd.to_datetime(df.index, errors="coerce")
+        idx = df.index
         idx = idx.dropna()
         if len(idx):
             return f"<index>: {idx.min().date()} .. {idx.max().date()} (n={len(idx)})"
@@ -366,8 +377,8 @@ def main() -> int:
     print("  target-in-features). Open each and confirm before calling the result invalid.")
     print("- Cross-check declared split dates against dataset spans: a split_date that")
     print("  sits outside a dataset's min..max means the split silently did nothing.")
-    print("- Absence of cost/slippage hits with a nonzero declared cost is GOOD; absence")
-    print("  of any cost handling at all is itself a fantasy-fill finding.")
+    print("- Scanner matches do not establish that costs are applied or omitted; inspect")
+    print("  the PnL path and distinguish stated gross returns from net claims.")
     return 0
 
 

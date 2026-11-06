@@ -1,6 +1,6 @@
 ---
 name: v-notebook
-description: "Enforce the config-then-data-then-preprocessing-then-modeling notebook convention, strip git-bloating outputs, catch unseeded randomness, and promote stable logic from notebooks into src/. Use for Jupyter/.ipynb ML repos where notebooks should stay clean and reusable logic belongs in modules. Key capabilities: JSON-parse every notebook with no nbformat dependency, report section order vs the convention, committed output bytes, mid-notebook imports, missing end-of-block success prints, an unseeded-RNG census (the usual cause of results changing between runs), and code-cell duplication across notebooks and against src/*.py; then produce a violations table plus a promotion plan (which cells become typed, docstringed src/ functions) and end with one paste-ready cleanup bash block. Trigger phrases: clean my notebooks, promote this notebook to src/, enforce my notebook convention, strip outputs and check notebook hygiene, why do my notebook results change between runs, move stable logic out of the notebook."
+description: "Review or clean Jupyter notebooks for section order, output bloat, reproducibility, and reusable-code promotion into src/. Use for notebook hygiene or requested refactors; changes require an implementation request."
 ---
 
 # Notebook Hygiene & Promotion
@@ -9,19 +9,14 @@ Enforce the notebook convention, kill output bloat and unseeded randomness, and 
 
 Stay in review mode for the analysis. The only edits this skill makes are the promotion refactor and output strip, and only when the user asks.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and scope
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
+- Read project instructions and relevant context first. Resolve `scripts/` and `references/` from this skill's directory; run helpers with the project's interpreter. Use scanner output as leads, then verify the source, data, active configuration, and reachable trigger. Disclose checks that could not run; direct inspection can still establish independent evidence.
+- For each verified bug, give frequency **1–10** and impact **1–10**, show **frequency x impact = score**, and briefly justify both ratings. Confidence is separate from occurrence frequency. Checklist entries and statistical warning signs are inspection prompts, not automatic bugs.
+- Fix threshold: **5**, unless the user changes it. Below 5, leave code alone and record one deduplicated item in an existing authorized backlog or **Deferred issues**; do not create remote issues without authorization. At 5 or above, propose the smallest fix and implement only when the task authorizes changes. A review request stays review-only.
+- Preserve the requested report format, adding evidence and scores to findings. Pass the trigger, evidence, ratings, threshold, and deferrals to any fixer. Stop after scoped work and required checks pass; revisit only affected paths, failed checks, or unresolved evidence.
 
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Exhaust the search.** For discovery, keep going until two consecutive passes surface nothing new; do not stop at the first plausible batch. Never silently cap coverage — state what you skipped and why.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
+Confirm the effect of section-order, seed, and duplicate-cell scanner results before proposing changes. Identical text alone does not prove a shared abstraction is appropriate.
 
 ## Quick flow
 
@@ -30,11 +25,13 @@ Run this skill in your highest-effort mode, whatever model you are. Prefer corre
 3. Load [references/notebook-playbook.md](references/notebook-playbook.md) for the convention, the violations-table format, the promotion-plan format, and the output contract.
 4. Produce the violations table and promotion plan, then end with exactly one bash cleanup block.
 
+For an authorized output cleanup without nbconvert, run `scripts/strip-outputs.py <explicit notebook paths>`. It validates before writing and replaces changed files atomically. Quote paths and select only notebooks in the requested scope.
+
 ## Output rules
 
 - Violations table: `notebook | violation | severity | smallest fix`.
 - Label **duplication** findings **Confirmed from code** (hashes matched); label order/import/success-print findings **Strongly inferred** (heuristic) and confirm by eye.
-- Unseeded randomness is High severity — it is the usual cause of "results changed between runs".
+- Trace seed handling across the executed path before calling randomness uncontrolled; shared setup may seed it. Rate the observed reproducibility effect.
 - The promotion plan names the `src/` module + function each stable cell becomes, with type hints and Google docstrings per Veer's Python standards, plus the rewritten import cell.
 - End with exactly one fenced `bash` block for cleanup (strip outputs); nothing after it. If nothing needs cleanup, say so and omit the block.
 

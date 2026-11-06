@@ -1,6 +1,6 @@
 ---
 name: v-run-ledger
-description: "Zero-infra experiment tracking: append one row per training run to experiments/runs.csv and generate model cards, with no MLflow or server. Use for ML repos where training runs are compared by scrolling notebook outputs and results evaporate between sessions. Key capabilities: append-only ledger (refuses to edit existing rows, matching the immutability rule) capturing run id, UTC time, git SHA + dirty flag, data-file sha256, model class, params JSON + hash, and CV metric mean/std; answer which-run-was-best from the ledger rather than memory; and generate models/<run-id>-card.md covering intended use, data provenance, CV protocol, metrics, assumptions, and limitations. Trigger phrases: log this training run, add this to the experiment ledger, generate a model card for this run, which run was best so far, track my experiments without mlflow, record this model result."
+description: "Append training-run facts to an immutable CSV ledger, compare recorded runs, and generate sourced model cards. Use for lightweight experiment tracking without a server; corrections are new rows."
 ---
 
 # Experiment Ledger & Model Cards
@@ -9,23 +9,18 @@ Lightweight, durable experiment tracking — one append-only CSV and generated m
 
 This skill writes only under `experiments/` and `models/`. It is append-only: existing ledger rows are never edited or deleted.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and scope
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
+- Read project instructions and relevant context first. Resolve `scripts/` and `references/` from this skill's directory; run helpers with the project's interpreter. Use scanner output as leads, then verify the source, data, active configuration, and reachable trigger. Disclose checks that could not run; direct inspection can still establish independent evidence.
+- For each verified bug, give frequency **1–10** and impact **1–10**, show **frequency x impact = score**, and briefly justify both ratings. Confidence is separate from occurrence frequency. Checklist entries and statistical warning signs are inspection prompts, not automatic bugs.
+- Fix threshold: **5**, unless the user changes it. Below 5, leave code alone and record one deduplicated item in an existing authorized backlog or **Deferred issues**; do not create remote issues without authorization. At 5 or above, propose the smallest fix and implement only when the task authorizes changes. A review request stays review-only.
+- Preserve the requested report format, adding evidence and scores to findings. Pass the trigger, evidence, ratings, threshold, and deferrals to any fixer. Stop after scoped work and required checks pass; revisit only affected paths, failed checks, or unresolved evidence.
 
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Exhaust the search.** For discovery, keep going until two consecutive passes surface nothing new; do not stop at the first plausible batch. Never silently cap coverage — state what you skipped and why.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
+Log measured run facts and supplied parameters. Do not manufacture metrics, overwrite existing model cards, or rewrite earlier rows. Disclose incompatible datasets, split protocols, or scoring conventions when comparing runs.
 
 ## Quick flow
 
-1. Read repo context if present: `CLAUDE.md`, `README.md`, the training script, and any existing `experiments/runs.csv`.
+1. Read repo context if present: `AGENTS.md`, `CLAUDE.md`, `README.md`, the training script, and any existing `experiments/runs.csv`.
 2. Log a run: `scripts/log-run.py <repo> --data <file> --model <cls> --params '<json>' --metric <name> --mean <m> --std <s> --note "<what changed>"`. The appended row is echoed back verbatim.
 3. Compare: `scripts/log-run.py <repo> --best <metric> [--minimize] [--top N]` answers "which run was best" from the ledger only.
 4. Model card: read the winning row + training script and write `models/<run-id>-card.md` per the template.

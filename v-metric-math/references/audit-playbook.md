@@ -47,20 +47,19 @@ metric | file:line | convention detected | benchmark | smallest fix
   `* np.sqrt(252)`, `method="lower"` on the quantile, swap `roc_auc_score` args.
 - If a metric has no hand-rolled implementation (uses sklearn/numpy directly),
   say so and move on — do not invent problems.
-- Close with the exact command to regenerate the pytest file so validation is
-  permanent, per Veer's "validate against known benchmarks" rule.
+- If requested, generate executable pytest assertions for successfully evaluated callable fixtures. Run them and report actual passes/failures; unsupported signatures/import errors remain unverified and are not emitted. Relative module/output paths resolve under the target repo, and existing tests require explicit `--overwrite`.
 
 ## benchmarks.json contract
 
 - Every `expected` is a hand-computed or closed-form ground truth. A failing
   test means the code diverges from the stated `convention` — never "fix" an
   expected value to make a test pass.
-- If a fixture carries `expected_override`, that is the corrected value and the
-  harness uses it in preference to `expected`.
+- Independently recompute a suspected anchor error from the stated convention;
+  do not alter a fixture merely to make the target implementation pass.
 - `abs_tol` is an absolute tolerance on the metric value; fall back to `1e-6`.
 
 ## Not this skill's job
 
-- Serving/inference correctness of a deployed model → `v-ml` / `v-ml-deploy`.
+- Serving/inference correctness of a deployed model → `v-ml`.
 - Whether the metric is the *right* metric for the business question → judgment
   call for the modeller, not a benchmark.

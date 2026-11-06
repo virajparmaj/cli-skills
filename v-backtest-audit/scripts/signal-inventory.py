@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import re
 import sys
 from dataclasses import dataclass, field
@@ -84,8 +85,16 @@ class Inventory:
     nw_mentions: int = 0
 
 
+def iter_repo_files(root: Path):
+    """Prune excluded trees before traversal; keep discovery deterministic."""
+    for directory, dirs, files in os.walk(root):
+        dirs[:] = sorted(d for d in dirs if d not in SKIP_DIRS)
+        for filename in sorted(files):
+            yield Path(directory) / filename
+
+
 def iter_source(root: Path):
-    for path in sorted(root.rglob("*")):
+    for path in iter_repo_files(root):
         if path.is_dir() or any(p in SKIP_DIRS for p in path.parts):
             continue
         if path.suffix == ".py":
@@ -231,7 +240,7 @@ def find_returns_series(root: Path):
         import pandas as pd
     except ImportError:
         return None
-    for path in sorted(root.rglob("*")):
+    for path in iter_repo_files(root):
         if path.is_dir() or any(p in SKIP_DIRS for p in path.parts):
             continue
         if path.suffix.lower() not in {".csv", ".parquet", ".feather"}:
@@ -256,7 +265,8 @@ def find_returns_series(root: Path):
     return None
 
 
-def sharpe_naive_and_adjusted(returns: list[float], lags: int = 5):
+def sharpe_naive_and_adjusted(returns: list[float], lags: int = 5,
+                              periods_per_year: float = 252):
     """Return (naive_sharpe_annualized, nw_adjusted_sharpe, autocorr_lag1)."""
     n = len(returns)
     if n < 2:
@@ -266,7 +276,7 @@ def sharpe_naive_and_adjusted(returns: list[float], lags: int = 5):
     if var <= 0:
         return None
     sd = math.sqrt(var)
-    naive = (mean / sd) * math.sqrt(252)
+    naive = (mean / sd) * math.sqrt(periods_per_year)
 
     # Newey-West HAC variance inflation using Bartlett kernel on the return series.
     def autocov(k: int) -> float:
@@ -285,7 +295,7 @@ def sharpe_naive_and_adjusted(returns: list[float], lags: int = 5):
     if hac <= 0:
         return naive, naive, lag1
     adj_sd = math.sqrt(hac)
-    adjusted = (mean / adj_sd) * math.sqrt(252)
+    adjusted = (mean / adj_sd) * math.sqrt(periods_per_year)
     return naive, adjusted, lag1
 
 
@@ -296,7 +306,19 @@ def main() -> int:
                         help="the headline Sharpe to test against the deflated threshold")
     parser.add_argument("--trials", type=int, default=None,
                         help="override the auto-counted number of signals tried")
+    parser.add_argument("--n-obs", type=int, default=None,
+                        help="observations underlying the reported annualized Sharpe")
+    parser.add_argument("--periods-per-year", type=float, default=252,
+                        help="annualization factor for reported/adjusted Sharpe (default: 252)")
     args = parser.parse_args()
+    if args.trials is not None and args.trials < 1:
+        parser.error("--trials must be at least 1")
+    if args.n_obs is not None and args.n_obs < 2:
+        parser.error("--n-obs must be at least 2")
+    if not math.isfinite(args.periods_per_year) or args.periods_per_year <= 0:
+        parser.error("--periods-per-year must be finite and greater than zero")
+    if args.reported_sharpe is not None and not math.isfinite(args.reported_sharpe):
+        parser.error("--reported-sharpe must be finite")
 
     root = Path(args.repo_path).resolve()
     if not root.exists():
@@ -357,19 +379,25 @@ def main() -> int:
     print(f"expected max Sharpe under the null (best of N noise strategies):")
     print(f"  ~ {ds_se:.3f} standard errors of the Sharpe estimate")
     print(f"Bonferroni critical z at family alpha=0.05: {bonf:.3f}")
-    print("  A reported Sharpe's t-stat (Sharpe * sqrt(n_obs)) must exceed this z,")
-    print("  and the Sharpe itself must clear the expected-max bar above, to survive.")
+    print("  These are standard-error units, not annualized Sharpe units.")
+    print("  Under iid assumptions, z = annualized Sharpe * sqrt(n_obs / periods_per_year).")
+    print("  This expected-max heuristic is not a full Deflated Sharpe Ratio probability.")
 
     candidate = args.reported_sharpe
     if candidate is None and reported_sharpes:
         candidate = max(reported_sharpes)
         print(f"(using max reported Sharpe from code: {candidate})")
     if candidate is not None:
-        verdict = "CLEARS expected-max noise bar" if candidate > ds_se \
-            else "DOES NOT clear expected-max noise bar — likely a false discovery"
-        print(f"reported Sharpe {candidate}: {verdict}")
-        print("  Note: the SE-unit bar needs sample length n_obs to become a Sharpe")
-        print("  number. Provide n_obs from the dataset span to finish the comparison.")
+        if args.n_obs is None:
+            print(f"reported annualized Sharpe {candidate}: comparison UNVERIFIED")
+            print("  Supply --n-obs and verify --periods-per-year; no pass/fail is inferred.")
+        else:
+            z_score = candidate * math.sqrt(args.n_obs / args.periods_per_year)
+            clears = z_score > ds_se
+            print(f"reported annualized Sharpe {candidate}; n_obs={args.n_obs}; "
+                  f"periods_per_year={args.periods_per_year:g}; iid z={z_score:.3f}")
+            print("  " + ("CLEARS" if clears else "DOES NOT clear") + " expected-max noise bar")
+            print("  This heuristic comparison alone does not validate or invalidate a backtest.")
     else:
         print("no reported Sharpe supplied or found — pass --reported-sharpe X to test.")
     print()
@@ -381,12 +409,13 @@ def main() -> int:
         print("hint: pip install pandas pyarrow  # to enable Newey-West adjustment")
     else:
         rel, col, vals = found
-        res = sharpe_naive_and_adjusted(vals)
+        res = sharpe_naive_and_adjusted(vals, periods_per_year=args.periods_per_year)
         if res is None:
             print(f"{rel} column '{col}': could not compute (zero variance / too short)")
         else:
             naive, adjusted, lag1 = res
             print(f"{rel} column '{col}' (n={len(vals)}):")
+            print(f"  annualization periods/year:         {args.periods_per_year:g}")
             print(f"  naive annualized Sharpe:            {naive:.3f}")
             print(f"  Newey-West adjusted Sharpe:         {adjusted:.3f}")
             print(f"  lag-1 autocorrelation of returns:   {lag1:.3f}")
@@ -403,9 +432,8 @@ def main() -> int:
     print("  adding signals, the real N is larger than what one file shows — ask.")
     print("- A Sharpe that beats the naive t-stat but not the deflated/Bonferroni bar")
     print("  is consistent with pure luck across N trials, not skill.")
-    print("- Missing split dates => metrics may be in-sample; treat them as upper bounds.")
-    print("- Missing turnover/Newey-West handling => costs and autocorrelation likely")
-    print("  unaccounted for; the honest Sharpe is lower than reported.")
+    print("- Missing split dates, turnover, or Newey-West mentions are inspection leads,")
+    print("  not proof of in-sample metrics, omitted costs, or serial correlation.")
     return 0
 
 

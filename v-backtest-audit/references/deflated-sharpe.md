@@ -24,8 +24,7 @@ signal counting, deflated Sharpe, or overlapping samples.
   defined in the repo vs the number whose metrics are reported. A large gap is
   the multiple-testing exposure.
 - **deflated / Bonferroni threshold** — the Sharpe bar the best signal must clear
-  given `N` trials. Read it as: "with N signals tried, a Sharpe below this bar is
-  consistent with luck."
+  given `N` trials, in standard-error units. Compare an annualized Sharpe only after converting with its actual observation count and periods per year. This is a heuristic, not a full DSR probability.
 - **autocorrelation-adjusted Sharpe** — the naive Sharpe re-estimated with a
   Newey-West / Lo adjustment for serial correlation.
 
@@ -38,13 +37,11 @@ the skew/kurtosis of returns, what is the probability the true Sharpe is > 0?
   `γ3`, kurtosis `γ4`.
 - The expected maximum Sharpe under the null grows with `N` — that expected
   maximum is the bar. Report DSR as a probability; below ~0.95 is not convincing.
-- When the script cannot compute the full DSR (missing returns series), fall back
-  to the Bonferroni-style bar and label the finding **Strongly inferred**.
+- The bundled script does not compute a full DSR probability. It reports an expected-max approximation and Bonferroni critical z. Without sample length, annualization, and justified assumptions, leave any pass/fail comparison **UNVERIFIED**.
 
 ## How to grade it
 
-- **P0** — the reported Sharpe fails the deflated bar: results invalid on
-  statistical grounds alone.
+- A failed statistical bar means the claimed evidence for skill is insufficient under its assumptions; it does not prove a mechanical bug or make the observed returns invalid. Score any unsupported performance claim from its actual use and impact.
 - **P1** — autocorrelation-inflated Sharpe with no adjustment, or in-sample
   metrics reported as out-of-sample.
 - **P2** — overlapping samples inflating t-stats; many trials with no correction

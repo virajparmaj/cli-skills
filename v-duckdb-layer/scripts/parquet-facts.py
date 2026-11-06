@@ -361,17 +361,22 @@ def print_drift(groups: dict[str, list[tuple[Path, str, list[tuple[str, str]]]]]
         fps = {fp for _, fp, _ in entries if fp}
         if len(entries) < 2:
             continue
+        verified = [(path, fp, cols) for path, fp, cols in entries if fp]
+        if len(verified) != len(entries):
+            print(f"  {table}: UNVERIFIED schema for {len(entries) - len(verified)} of {len(entries)} files")
+        if len(verified) < 2:
+            continue
         if len(fps) <= 1:
-            print(f"  {table}: OK ({len(entries)} files, single schema)")
+            print(f"  {table}: single schema among {len(verified)} inspected files")
             continue
         any_drift = True
         print(f"  {table}: DRIFT ({len(entries)} files, {len(fps)} distinct schemas)")
         # Show column-set differences against the first file as baseline.
-        base_path, _, base_cols = entries[0]
+        base_path, _, base_cols = verified[0]
         base_map = dict(base_cols)
         base_rel = base_path.relative_to(root) if _is_relative(base_path, root) else base_path
         print(f"    baseline: {base_rel}")
-        for path, fp, cols in entries[1:]:
+        for path, fp, cols in verified[1:]:
             cur_map = dict(cols)
             added = [c for c in cur_map if c not in base_map]
             removed = [c for c in base_map if c not in cur_map]
@@ -391,7 +396,7 @@ def print_drift(groups: dict[str, list[tuple[Path, str, list[tuple[str, str]]]]]
             if retyped:
                 print(f"      ~ retyped: {'; '.join(retyped)}")
     if not any_drift:
-        print("  no multi-file tables with drift detected")
+        print("  no drift detected among available schemas; unavailable schemas remain unverified")
     print()
 
 

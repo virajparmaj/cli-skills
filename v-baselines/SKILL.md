@@ -1,30 +1,25 @@
 ---
 name: v-baselines
-description: "Run an honest baseline model zoo — Dummy, Linear, RandomForest, XGBoost — under one shared CV protocol and report whether the fancy model actually beats the baselines. Use before trusting a tuned model on any CSV/Parquet dataset with a target column. Key capabilities: auto-detect classification vs regression and datetime index (TimeSeriesSplit vs StratifiedKFold), wrap every model in a Pipeline sharing one splitter and seed so preprocessing never leaks, pick the right metric (roc_auc / accuracy / r2), print a model-by-model results table with fit times, and give a verdict grounded in CV noise (does the best model beat dummy by more than one std, does it beat the linear baseline). Appends results to experiments/runs.csv when present. Trigger phrases: run baselines on this dataset, compare xgboost against sklearn baselines, is my model actually beating a dummy, set up a model comparison harness, does this model beat a simple baseline, what's my baseline score."
+description: "Compare Dummy, Linear, RandomForest, and optional XGBoost models under shared, fold-local preprocessing and cross-validation. Use to establish an honest baseline on a tabular dataset with a target column."
 ---
 
 # Honest Baseline Harness
 
 Prove the tuned model earns its complexity — beat a dummy and a linear baseline under one fair CV protocol, or don't bother.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and scope
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
+- Read project instructions and relevant context first. Resolve `scripts/` and `references/` from this skill's directory; run helpers with the project's interpreter. Use scanner output as leads, then verify the source, data, active configuration, and reachable trigger. Disclose checks that could not run; direct inspection can still establish independent evidence.
+- For each verified bug, give frequency **1–10** and impact **1–10**, show **frequency x impact = score**, and briefly justify both ratings. Confidence is separate from occurrence frequency. Checklist entries and statistical warning signs are inspection prompts, not automatic bugs.
+- Fix threshold: **5**, unless the user changes it. Below 5, leave code alone and record one deduplicated item in an existing authorized backlog or **Deferred issues**; do not create remote issues without authorization. At 5 or above, propose the smallest fix and implement only when the task authorizes changes. A review request stays review-only.
+- Preserve the requested report format, adding evidence and scores to findings. Pass the trigger, evidence, ratings, threshold, and deferrals to any fixer. Stop after scoped work and required checks pass; revisit only affected paths, failed checks, or unresolved evidence.
 
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Exhaust the search.** For discovery, keep going until two consecutive passes surface nothing new; do not stop at the first plausible batch. Never silently cap coverage — state what you skipped and why.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
+Keep learned preprocessing inside each cross-validation fold. Use the same rows, folds, scoring convention, and random seed for every model; report errors or non-finite scores. The one-standard-deviation rule below is a descriptive heuristic, not a significance test.
 
 ## Quick flow
 
-1. Read repo context if present: `CLAUDE.md`, `README.md`, and the training data location.
-2. Run `scripts/run-baselines.py <data> <target>` — add `--datetime-col <col>` to force walk-forward, `--folds N`, and `--repo .` to append to the ledger.
+1. Read repo context if present: `AGENTS.md`, `CLAUDE.md`, `README.md`, and the training data location.
+2. Run `scripts/run-baselines.py <data> <target>` — add `--datetime-col <col>` to force walk-forward, `--folds N`, `--task classification|regression` for ambiguous targets, `--gap N` for temporal label overlap, and `--repo .` to append to the ledger.
 3. Load [references/baselines-playbook.md](references/baselines-playbook.md) for the protocol, the zoo, and how to read the verdict.
 4. Report the results table and verdict.
 

@@ -4,10 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
+import os
+from functools import lru_cache
 from pathlib import Path
 
 
 CONTEXT_ORDER = [
+    "AGENTS.md",
     "CLAUDE.md",
     "README.md",
     "notes/13_prompt_context.md",
@@ -18,6 +22,8 @@ CONTEXT_ORDER = [
     ".env.example",
     ".env",
 ]
+SKIP_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__", "dist", "build"}
+BACKEND_PATTERNS = [f"{folder}/*.py" for folder in ("backend", "app", "api", "server")] + ["main.py", "app.py", "server.py", "api.py"]
 
 
 def rel(root: Path, path: Path) -> str:
@@ -28,17 +34,29 @@ def existing(root: Path, ordered_paths: list[str]) -> list[Path]:
     return [root / item for item in ordered_paths if (root / item).exists()]
 
 
+@lru_cache(maxsize=32)
+def repo_files(root: Path) -> tuple[Path, ...]:
+    found = []
+    for directory, dirs, files in os.walk(root):
+        dirs[:] = [name for name in dirs if name not in SKIP_DIRS]
+        found.extend(Path(directory) / filename for filename in files)
+    return tuple(sorted(found))
+
+
 def glob_many(root: Path, patterns: list[str]) -> list[Path]:
-    found: set[Path] = set()
+    found = set()
     for pattern in patterns:
-        found.update(root.glob(pattern))
-    return sorted(p for p in found if p.exists())
+        if "/" in pattern:
+            base = pattern.split("/", 1)[0]
+            candidates = repo_files(root / base)
+        else:
+            candidates = (path for path in root.iterdir() if path.is_file())
+        found.update(path for path in candidates if fnmatch.fnmatchcase(rel(root, path), pattern))
+    return sorted(found)
 
 
 def infer_topology(root: Path) -> str:
-    has_backend = (root / "backend").exists() and bool(
-        glob_many(root, ["backend/*.py", "backend/**/*.py"])
-    )
+    has_backend = bool(glob_many(root, BACKEND_PATTERNS))
     has_frontend_preprocessing = any(
         (root / candidate).exists()
         for candidate in [
@@ -49,7 +67,7 @@ def infer_topology(root: Path) -> str:
             "scripts/build-demo-snapshot.ts",
         ]
     )
-    has_frontend = (root / "src").exists()
+    has_frontend = bool(glob_many(root, ["src/*.tsx", "src/*.jsx", "src/*.ts", "src/*.js"]))
 
     if not has_backend and has_frontend:
         return "frontend-only/demo"
@@ -57,7 +75,7 @@ def infer_topology(root: Path) -> str:
         return "hybrid"
     if has_backend:
         return "backend-only"
-    return "frontend-only/demo"
+    return "unknown (no recognized backend or frontend surface)"
 
 
 def print_section(title: str, items: list[Path], root: Path) -> None:
@@ -88,7 +106,7 @@ def main() -> int:
     print_section("Context files (read in this order)", existing(root, CONTEXT_ORDER), root)
     print_section(
         "Dependency manifests",
-        existing(root, ["package.json", "backend/requirements.txt", "pyproject.toml"]),
+        existing(root, ["package.json", "requirements.txt", "backend/requirements.txt", "pyproject.toml", "uv.lock", "poetry.lock"]),
         root,
     )
     print_section(
@@ -123,7 +141,7 @@ def main() -> int:
     )
     print_section(
         "Backend inference files",
-        glob_many(root, ["backend/*.py", "backend/**/*.py"]),
+        glob_many(root, BACKEND_PATTERNS),
         root,
     )
     print_section(

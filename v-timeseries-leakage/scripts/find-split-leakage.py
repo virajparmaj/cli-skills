@@ -60,11 +60,19 @@ def iter_sources(repo: Path):
                     nb = json.loads(p.read_text(errors="ignore"))
                 except (OSError, json.JSONDecodeError):
                     continue
+                chunks = []
                 for i, cell in enumerate(nb.get("cells", [])):
                     if cell.get("cell_type") == "code":
                         src = cell.get("source", "")
                         code = "".join(src) if isinstance(src, list) else str(src)
-                        yield Path(f"{p}#cell{i}"), code
+                        lines = code.splitlines()
+                        # Keep line offsets while ignoring IPython commands that
+                        # are not Python syntax. Cell order is a static lead only.
+                        if lines and lines[0].startswith("%%") and not lines[0].startswith(("%%time", "%%capture", "%%python")):
+                            continue
+                        cleaned = ["# " + line if line.lstrip().startswith(("%", "!")) else line for line in lines]
+                        chunks.append(f"# __vts_cell_{i}\n" + "\n".join(cleaned))
+                yield p, "\n".join(chunks)
 
 
 def analyze(path: Path, text: str) -> dict:
@@ -81,6 +89,16 @@ def analyze(path: Path, text: str) -> dict:
                                               r"parse_dates|to_datetime|DatetimeIndex)",
                                               text, re.I)),
     }
+    locations = {}
+    cell, cell_line = None, 0
+    for line_no, line in enumerate(text.splitlines(), 1):
+        marker = re.fullmatch(r"# __vts_cell_(\d+)", line)
+        if marker:
+            cell, cell_line = int(marker.group(1)), 0
+        else:
+            cell_line += 1
+            if cell is not None:
+                locations[line_no] = f"{path}#cell{cell}:{cell_line}"
     # regex-based line facts (works even if AST fails on notebook fragments)
     for m in STATIONARITY_RE.finditer(text):
         rec["stationarity_checks"] = True
@@ -95,7 +113,9 @@ def analyze(path: Path, text: str) -> dict:
 
     try:
         tree = ast.parse(text)
-    except SyntaxError:
+    except SyntaxError as exc:
+        rec["parse_error"] = str(exc)
+        rec["fits_before_split"] = []
         return rec
 
     for node in ast.walk(tree):
@@ -111,6 +131,19 @@ def analyze(path: Path, text: str) -> dict:
             elif isinstance(node.func, ast.Attribute) and node.func.attr in {"merge", "join"}:
                 # only note if no obvious lag shift on the same line region
                 rec["lagless_merges"].append({"line": node.lineno})
+            elif isinstance(node.func, ast.Attribute) and node.func.attr == "shift":
+                periods = node.args[0] if node.args else next((kw.value for kw in node.keywords if kw.arg == "periods"), None)
+                try:
+                    value = ast.literal_eval(periods) if periods is not None else 1
+                except (ValueError, TypeError):
+                    value = None
+                if isinstance(value, (int, float)) and value < 0:
+                    if not any(window["line"] == node.lineno for window in rec["forward_windows"]):
+                        rec["forward_windows"].append({"line": node.lineno, "kind": "shift(-n) future value"})
+
+    for key in ("split_calls", "cv_calls", "fit_calls", "forward_windows", "regime_signatures", "lagless_merges"):
+        for event in rec[key]:
+            event["location"] = locations.get(event["line"], f"{path}:{event['line']}")
 
     # derive: earliest split line, and fits before it
     split_lines = [c["line"] for c in rec["split_calls"]]
@@ -144,14 +177,15 @@ def summarize(records: list[dict]) -> dict:
     for r in records:
         for s in r["split_calls"]:
             if s["shuffle"] in ("DEFAULT", True) and r["datetime_index_hint"]:
-                flags.append(f"{r['file']}:{s['line']} train_test_split with shuffle={s['shuffle']} on datetime-indexed data")
+                flags.append(f"{s.get('location', r['file'] + ':' + str(s['line']))} train_test_split with shuffle={s['shuffle']} on datetime-indexed data")
         if r["fits_before_split"]:
             for f in r["fits_before_split"]:
-                flags.append(f"{r['file']}:{f['line']} .{f['method']}() before the split (fit-on-full-data contamination)")
+                flags.append(f"{f.get('location', r['file'] + ':' + str(f['line']))} .{f['method']}() before the split (trace whether full data reached the fit)")
         for w in r["forward_windows"]:
-            flags.append(f"{r['file']}:{w['line']} {w['kind']} (lookahead)")
+            flags.append(f"{w.get('location', r['file'] + ':' + str(w['line']))} {w['kind']} (verify feature vs label use)")
         for g in r["regime_signatures"]:
-            flags.append(f"{r['file']}:{g['line']} {g['kind']} (smoothing conditions on the full sample; filtered is the honest choice for features)")
+            if g["kind"] == "smoothed_marginal_probabilities":
+                flags.append(f"{g.get('location', r['file'] + ':' + str(g['line']))} {g['kind']} (verify whether smoothing reaches prediction-time features)")
         has_kfold = any(c["name"] in {"KFold", "StratifiedKFold"} for c in r["cv_calls"])
         has_tss = any(c["name"] == "TimeSeriesSplit" for c in r["cv_calls"])
         if has_kfold and not has_tss and r["datetime_index_hint"]:
@@ -174,7 +208,7 @@ def main() -> int:
     records = [analyze(p, t) for p, t in iter_sources(repo)]
     records = [r for r in records if any((r["split_calls"], r["cv_calls"], r["fit_calls"],
                                           r["forward_windows"], r["regime_signatures"],
-                                          r["lagless_merges"]))]
+                                          r["lagless_merges"], r.get("parse_error")))]
     summary = summarize(records)
 
     if args.json:
@@ -195,12 +229,14 @@ def main() -> int:
     for r in records:
         print(f"\n# {r['file']}  (datetime index: {r['datetime_index_hint']}, "
               f"stationarity check: {r['stationarity_checks']})")
+        if r.get("parse_error"):
+            print(f"  AST coverage UNVERIFIED: {r['parse_error']}")
         for s in r["split_calls"]:
-            print(f"  split @ line {s['line']}  shuffle={s['shuffle']}")
+            print(f"  split @ {s.get('location', s['line'])}  shuffle={s['shuffle']}")
         for c in r["cv_calls"]:
             print(f"  cv: {c['name']} @ line {c['line']}")
         for f in r["fits_before_split"]:
-            print(f"  .{f['method']}() @ line {f['line']} BEFORE split")
+            print(f"  .{f['method']}() @ {f.get('location', f['line'])} BEFORE split")
         for w in r["forward_windows"]:
             print(f"  window: {w['kind']} @ line {w['line']}")
         for g in r["regime_signatures"]:

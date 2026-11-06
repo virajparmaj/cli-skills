@@ -13,12 +13,11 @@ reads as UTC).
 - **Schema fingerprint** per file, and a diff across files of the same table
   (schema drift = the same table with different columns/types across partitions).
 - **Timezone awareness** per timestamp column: `TIMESTAMP` (naive) vs
-  `TIMESTAMPTZ`. Naive timestamps in a market-data store are a bug.
+  `TIMESTAMPTZ`. Confirm the declared storage convention and reader behavior before classifying naive timestamps as a bug.
 - **Date range** (min/max) per timestamp column.
 - **Duplicate-key counts** on candidate entity keys.
 - **Row-group / file sizing** (tiny files or one giant row group).
-- **Idempotency probe**: a stable hash of sorted keys so re-ingesting the same
-  source twice is visible as a row-count doubling.
+- **Key hash snapshot**: can support a before/after comparison, but does not establish ingest idempotency by itself. Rerun ingestion only in an authorized disposable copy.
 
 ## Judgment layer (the skill reads the flagged code)
 
@@ -62,4 +61,4 @@ Review the query/ingest layer for:
 - Whether each dataset's *origin* is documented → `v-provenance` (shares
   `parquet-facts.py`-style facts but answers a different question).
 - Model training data hygiene (leakage, imbalance) → `v-dataset`.
-- Serving/inference reliability → `v-ml` / `v-ml-deploy`.
+- Serving/inference reliability → `v-ml`.

@@ -1,6 +1,6 @@
 ---
 name: v-provenance
-description: "Stamp every dataset with source, date, methodology, and content hash, and flag the ones with no provenance record. Use for finance and ML repos with data/ folders of CSV/Parquet (funding-rate, macro-regime, credit-risk projects) and for vee-cee's no-edge-without-provenance knowledge-graph invariant. Key capabilities: DuckDB/pandas inventory of every data file (sha256, rows, columns, null rates, datetime range), classify each as OK / STALE (bytes changed since its card) / ORPHANED (no card), trace lineage from acquisition code, generate pre-filled provenance cards under data/PROVENANCE/ with only human-judgment fields left blank, a --verify mode that re-hashes and catches stale cards, and edge-sampling to prove the no-edge-without-provenance invariant. Trigger phrases: stamp provenance on the datasets, which data files have no provenance, document data provenance, where did this dataset come from, verify the data hashes still match, verify the no-edge-without-provenance invariant."
+description: "Inventory dataset provenance and content hashes, detect missing or stale source records, and generate cards when requested. Use to document or verify CSV/Parquet lineage without changing source datasets."
 ---
 
 # Data Provenance Stamp & Audit
@@ -9,23 +9,18 @@ Give every dataset a durable origin record, and flag the ones that have none or 
 
 This skill both audits and generates. It writes provenance cards under `data/PROVENANCE/` (or `data/DATA.md`) only in `--emit` mode or when the user asks; it never modifies the datasets themselves.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and scope
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
+- Read project instructions and relevant context first. Resolve `scripts/` and `references/` from this skill's directory; run helpers with the project's interpreter. Use scanner output as leads, then verify the source, data, active configuration, and reachable trigger. Disclose checks that could not run; direct inspection can still establish independent evidence.
+- For each verified bug, give frequency **1–10** and impact **1–10**, show **frequency x impact = score**, and briefly justify both ratings. Confidence is separate from occurrence frequency. Checklist entries and statistical warning signs are inspection prompts, not automatic bugs.
+- Fix threshold: **5**, unless the user changes it. Below 5, leave code alone and record one deduplicated item in an existing authorized backlog or **Deferred issues**; do not create remote issues without authorization. At 5 or above, propose the smallest fix and implement only when the task authorizes changes. A review request stays review-only.
+- Preserve the requested report format, adding evidence and scores to findings. Pass the trigger, evidence, ratings, threshold, and deferrals to any fixer. Stop after scoped work and required checks pass; revisit only affected paths, failed checks, or unresolved evidence.
 
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Exhaust the search.** For discovery, keep going until two consecutive passes surface nothing new; do not stop at the first plausible batch. Never silently cap coverage — state what you skipped and why.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
+Hash dataset bytes and trace source claims to acquisition code or existing records. Never infer a source merely from its filename. Create cards only when requested, preserving existing lineage and source data.
 
 ## Quick flow
 
-1. Read repo context first if present: `CLAUDE.md`, `README.md`, `notes/`, and any existing `data/PROVENANCE/` or `data/DATA.md`.
+1. Read repo context first if present: `AGENTS.md`, `CLAUDE.md`, `README.md`, `notes/`, and any existing `data/PROVENANCE/` or `data/DATA.md`.
 2. Run `scripts/inventory-datasets.py <repo>` to profile every data file and diff it against existing cards. Each dataset is reported `OK`, `STALE`, or `ORPHANED`.
    - `--emit` writes pre-filled provenance stubs for orphans.
    - `--verify` only re-hashes and reports STALE/OK; never writes.

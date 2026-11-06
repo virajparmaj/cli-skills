@@ -30,7 +30,7 @@ For every finding cite `file:line`. If a family is clean, say so explicitly.
 1. **Negative shift into a feature.** `shift(-n)` / `shift(periods=-n)` pulls future bars into the present. It is *only* acceptable when building a label that never re-enters the feature matrix. Trace where the shifted column goes.
 2. **Centered / non-lagged rolling stats.** `rolling(...).mean()` with `center=True`, or any rolling stat used on the same bar it closes, includes the current (unfinished) bar. The honest pattern is `rolling(w).mean().shift(1)`.
 3. **Resample-then-align.** `resample('1D')` right-labels the bar at the close; joining that back to intraday rows can expose the daily close before it happened. Confirm the alignment lags the resampled value.
-4. **Backfill / interpolate.** `bfill()` and `interpolate()` copy future values backward — always leakage in a time series. `ffill()` is directionally safe but check it is not paired with a later bfill.
+4. **Backfill / interpolate.** Trace whether filled values reach prediction-time features or only retrospective labels/analysis. A forward-reading feature leaks; a method name alone does not prove that path. Check whether interpolation actually uses future observations.
 5. **Forward index access.** In an event loop, `df.iloc[i+k]` or `prices[t+1]` inside the decision step reads a bar that has not occurred.
 6. **Same-bar signal + execution.** If the signal is computed from bar `t`'s close and the fill also happens at bar `t`'s close, there is no decision lag — you traded on information you only had at the close. Execution should be at `t+1` open (or `t` close with the signal from `t-1`).
 
@@ -99,9 +99,9 @@ Explicitly list every family that passed: e.g. "Survivorship: clean — universe
 Be specific, not "add tests." Examples:
 - a leakage guard asserting `FEATURE_COLS` is disjoint from every negative-shift / label column;
 - a split-order test asserting the scaler is fit only on rows before `train_end`;
-- a golden test: shuffle the input rows and assert the reported metric collapses toward zero (a real out-of-sample metric should not survive shuffling if the pipeline is honest — if it does, the split is leaking);
+- where appropriate, a label-permutation diagnostic under stated exchangeability assumptions; jointly shuffling features and labels is not a leakage test, and a nonzero metric alone does not establish leakage;
 - a cost-sensitivity test asserting Sharpe drops monotonically as the cost parameter rises from 0;
-- a deflated-Sharpe test asserting the reported Sharpe exceeds the expected-max bar for the recorded N.
+- a threshold-unit test that converts annualized Sharpe using the observation count and frequency, and leaves unsupported comparisons unverified.
 
 ### 6. Verdict
 

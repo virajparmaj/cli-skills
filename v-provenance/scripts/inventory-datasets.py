@@ -24,6 +24,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -67,13 +68,10 @@ def find_data_files(repo: Path) -> list[Path]:
         root = repo / base
         if not root.exists():
             continue
-        for p in sorted(root.rglob("*")):
-            if not p.is_file() or p.suffix.lower() not in DATA_EXTS:
-                continue
-            if any(part in SKIP_PARTS for part in p.relative_to(repo).parts):
-                continue
-            out.append(p)
-    return out
+        for directory, dirs, files in os.walk(root):
+            dirs[:] = [d for d in dirs if d not in SKIP_PARTS]
+            out.extend(Path(directory) / f for f in files if Path(f).suffix.lower() in DATA_EXTS)
+    return sorted(out)
 
 
 def profile_delimited(path: Path, delimiter: str) -> dict:
@@ -118,6 +116,7 @@ def profile_delimited(path: Path, delimiter: str) -> dict:
             "columns": cols,
             "rows": rows,
             "rows_sampled": truncated,
+            "partial": truncated,
             "nulls": null_rates,
             "dates": dates,
         }
@@ -299,6 +298,8 @@ def main() -> int:
     ap.add_argument("--verify", action="store_true", help="only report STALE/OK diff vs existing cards; never write")
     ap.add_argument("--json", action="store_true", help="dump raw facts as JSON instead of text tables")
     args = ap.parse_args()
+    if args.emit and args.verify:
+        ap.error("--emit and --verify are separate modes")
 
     repo = Path(args.repo_path).resolve()
     if not repo.exists():
@@ -308,13 +309,17 @@ def main() -> int:
     files = find_data_files(repo)
     recorded = read_existing_cards(repo)
 
-    print("=== environment ===")
-    print(f"duckdb: {'yes' if _DUCKDB else 'no'}   pyarrow: {'yes' if _PYARROW else 'no'}")
-    if not _DUCKDB and not _PYARROW:
-        print("hint: pip install duckdb  (for full parquet + fast profiling)")
-    print()
+    if not args.json:
+        print("=== environment ===")
+        print(f"duckdb: {'yes' if _DUCKDB else 'no'}   pyarrow: {'yes' if _PYARROW else 'no'}")
+        if not _DUCKDB and not _PYARROW:
+            print("hint: pip install duckdb  (for full parquet + fast profiling)")
+        print()
 
     if not files:
+        if args.json:
+            print("[]")
+            return 0
         print("=== inventory ===")
         print("No data files found under data/ (looked for .csv/.tsv/.parquet).")
         print("Not applicable: nothing to stamp.")
@@ -325,7 +330,7 @@ def main() -> int:
         rel = str(path.relative_to(repo))
         digest = sha256_of(path)
         size = path.stat().st_size
-        facts = profile(path)
+        facts = {} if args.verify else profile(path)
         status = classify(rel, digest, recorded)
         records.append(
             {
@@ -338,22 +343,34 @@ def main() -> int:
             }
         )
 
+    orphaned = [r for r in records if r["status"] == "ORPHANED"]
+    stale = [r for r in records if r["status"] == "STALE"]
+    ok = [r for r in records if r["status"] == "OK"]
+    if args.emit:
+        out_dir = repo / CARD_DIR
+        out_dir.mkdir(parents=True, exist_ok=True)
+        for record in orphaned:
+            slug = re.sub(r"[^\w.-]+", "_", record["file"])
+            dest = out_dir / f"{slug}.md"
+            try:
+                with dest.open("x", encoding="utf-8") as handle:
+                    handle.write(stub_text(record["file"], record, record["sha256"], record["size"]))
+                record["emitted_card"] = str(dest.relative_to(repo))
+            except FileExistsError:
+                record["emit_note"] = "existing card preserved; add its missing hash manually"
     if args.json:
         print(json.dumps(records, indent=2, default=str))
-        return 0
+        return 1 if args.verify and (stale or orphaned) else 0
 
     print("=== inventory ===")
     print(f"{'status':<9} {'rows':>10} {'cols':>5} {'size':>12}  file")
     for r in records:
         rows = r.get("rows")
-        rows_s = f"{rows:,}" if isinstance(rows, int) else "?"
+        rows_s = f"{rows:,}" + (" sample" if r.get("rows_sampled") else "") if isinstance(rows, int) else "?"
         cols_s = str(len(r.get("columns") or []))
         print(f"{r['status']:<9} {rows_s:>10} {cols_s:>5} {r['size']:>12,}  {r['file']}")
     print()
 
-    orphaned = [r for r in records if r["status"] == "ORPHANED"]
-    stale = [r for r in records if r["status"] == "STALE"]
-    ok = [r for r in records if r["status"] == "OK"]
 
     print("=== classification ===")
     print(f"OK: {len(ok)}   STALE: {len(stale)}   ORPHANED: {len(orphaned)}")
@@ -370,20 +387,15 @@ def main() -> int:
     print()
 
     if args.verify:
-        rc = 1 if stale else 0
+        rc = 1 if stale or orphaned else 0
         print("=== verify result ===")
-        print("STALE datasets found — cards are out of date." if stale else "All recorded hashes match. Provenance is current.")
+        print("Missing or stale provenance cards found." if rc else "All datasets have matching recorded hashes.")
         return rc
 
     if args.emit and orphaned:
-        out_dir = repo / CARD_DIR
-        out_dir.mkdir(parents=True, exist_ok=True)
         print("=== emitted stubs ===")
         for r in orphaned:
-            slug = re.sub(r"[^\w.-]+", "_", r["file"])
-            dest = out_dir / f"{slug}.md"
-            dest.write_text(stub_text(r["file"], r, r["sha256"], r["size"]), encoding="utf-8")
-            print(f"wrote {dest.relative_to(repo)}")
+            print(f"wrote {r['emitted_card']}" if "emitted_card" in r else f"{r['file']}: {r['emit_note']}")
         print("\nComputed facts are pre-filled. Fill only the Human fields section per card.")
     elif orphaned:
         print("=== stub preview (first orphan) ===")

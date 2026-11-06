@@ -57,4 +57,4 @@ The test set's statistics leak into training.
 - Data cleanliness (nulls, dupes, class imbalance) → `v-dataset`.
 - Whether the metric math is right → `v-metric-math`.
 - Regression inference validity (p-values, robust SEs) → `v-regression-diagnostics`.
-- Serving/inference skew → `v-ml` / `v-ml-deploy`.
+- Serving/inference skew → `v-ml`.

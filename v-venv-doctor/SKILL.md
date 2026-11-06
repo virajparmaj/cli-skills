@@ -1,52 +1,47 @@
 ---
 name: v-venv-doctor
-description: "Diagnose per-project Python environments on Apple Silicon and emit an ordered fix list: arm64 vs Rosetta, missing libomp for xgboost, accidental global-venv usage, and pin drift against the project's ML stack. Use when a Python/ML project won't set up cleanly on a MacBook M1/M2, xgboost or scipy misbehave, or you suspect the wrong interpreter is active. Key capabilities: detect project-local venv vs the global ~/.venvs/global interpreter, report interpreter architecture and Python version, diff installed packages against requirements.txt and the pinned stack (numpy 2.1.2, pandas 2.2.3, scikit-learn 1.5.2, xgboost 2.1.0, statsmodels 0.14.4), run xgboost/libomp and core-stack import smoke tests, and produce one status table plus exactly one bash block of ordered fix commands. Trigger phrases: fix my venv, run the env doctor, xgboost won't import on my mac, library not loaded libomp, check this project's python environment, why is numpy building from source, am I on the right python."
+description: "Diagnose a project Python environment on Apple Silicon: interpreter selection, architecture, dependency drift, and native import failures. Use for local setup problems; honor project pins over historical defaults."
 ---
 
 # venv Doctor (Apple Silicon)
 
 Diagnose a project's Python environment on an M-series Mac and hand back an ordered set of fix commands.
 
-<!-- skill-operating-standard -->
-## Operating standard — run at maximum capability
+## Evidence and scope
 
-Run this skill in your highest-effort mode, whatever model you are. Prefer correctness and completeness over speed or brevity; if you support extended thinking or an adjustable reasoning effort, raise it for this work. Do not guess when you can verify.
+- Read project instructions and relevant context first. Resolve `scripts/` and `references/` from this skill's directory; run helpers with the project's interpreter. Use scanner output as leads, then verify the source, data, active configuration, and reachable trigger. Disclose checks that could not run; direct inspection can still establish independent evidence.
+- For each verified bug, give frequency **1–10** and impact **1–10**, show **frequency x impact = score**, and briefly justify both ratings. Confidence is separate from occurrence frequency. Checklist entries and statistical warning signs are inspection prompts, not automatic bugs.
+- Fix threshold: **5**, unless the user changes it. Below 5, leave code alone and record one deduplicated item in an existing authorized backlog or **Deferred issues**; do not create remote issues without authorization. At 5 or above, propose the smallest fix and implement only when the task authorizes changes. A review request stays review-only.
+- Preserve the requested report format, adding evidence and scores to findings. Pass the trigger, evidence, ratings, threshold, and deferrals to any fixer. Stop after scoped work and required checks pass; revisit only affected paths, failed checks, or unresolved evidence.
 
-- **Think first.** Before acting, plan: what the skill must produce, which files or scripts give ground truth, and where the likely failure modes are. Reason step by step internally before writing the answer.
-- **Facts before judgment.** Run this skill's `scripts/` first (when it has them) and treat their output as the only ground truth. Never invent file paths, line numbers, metrics, or data a script did not produce. If a script cannot run, say so and mark every dependent conclusion UNVERIFIED.
-- **Evidence discipline.** Label every claim `Confirmed from code` (you read the exact file:line and traced the logic), `Strongly inferred` (a pattern implies it but a runtime path could exonerate it), or `Not found — fill in manually`. A scanner/grep hit is not a finding until you open the file and confirm it in context.
-- **Adversarial self-check.** After a first draft, run a second pass whose only job is to refute each finding: what input, config, or code path would make it false? Drop or downgrade anything you cannot defend. For subtle calls (leakage, statistics, security, correctness, money) reason from at least two independent angles before asserting.
-- **Exhaust the search.** For discovery, keep going until two consecutive passes surface nothing new; do not stop at the first plausible batch. Never silently cap coverage — state what you skipped and why.
-- **Use every tool you have.** When a capability (code execution, file read, web or docs lookup, subagents, parallel calls) is available and would raise accuracy, use it instead of answering from memory or a single pass.
-- **Honesty.** If a category is clean, say so; do not pad with generic best-practice filler that has no evidence in this repo. State assumptions, gaps, and anything unverified plainly.
-- **Contract.** Follow this skill's output contract exactly — strict format, severity ranks, verdict labels, smallest viable fix. For generator skills, every emitted value must trace to a computed fact or a cited line; label anything else inferred.
+Use the project lockfile, supported Python version, and dependency declarations as the authority; historical stack pins are examples only. Execute repairs when requested, preserving the existing environment until a replacement works.
 
 ## Quick flow
 
-1. Read repo context if present: `CLAUDE.md`, `requirements.txt`, `pyproject.toml`, `README.md`.
-2. Run `scripts/venv-doctor.sh <repo>` to gather facts: venv presence and whether the active env is the global one, interpreter arch/version, pip drift vs `requirements.txt` and the pinned stack, xgboost/libomp status, and a core-stack import smoke test.
+1. Read repo context if present: `AGENTS.md`, `CLAUDE.md`, `requirements.txt`, `pyproject.toml`, `README.md`.
+2. Run `scripts/venv-doctor.sh <repo>` to gather facts: venv presence and whether the active env is the global one, interpreter arch/version, dependency drift vs project requirements, xgboost/libomp status, and a core-stack import smoke test.
 3. Load [references/venv-playbook.md](references/venv-playbook.md) for the failure-mode table and the strict output contract.
 4. Turn the facts into the status table + ordered fix block.
 
 ## Output contract (strict)
 
 - First a status table: `check | result | pass/fail`.
-- Then exactly one fenced `bash` code block of ordered fix commands (most fundamental first: create/activate venv → `brew install libomp` → reinstall pinned stack), and nothing after it.
+- Then exactly one fenced `bash` code block of ordered fix commands (most fundamental first: create/activate venv → `brew install libomp` → reconcile project requirements), and nothing after it.
 - Include only commands that address a real FAIL/WARN from the table.
 - If everything passes, say "environment healthy" and emit no bash block.
 
 ## What it checks (Apple Silicon focus)
 
 - Per-project venv present and active vs the global `~/.venvs/global` interpreter (Veer's rule).
-- arm64 native vs x86_64 under Rosetta; Python 3.11.x.
+- arm64 native vs x86_64 under Rosetta; Python version against the project's declared requirement.
 - `libomp` present for xgboost (the classic macOS import failure).
 - Packages installed from arm64 wheels, not compiled from sdist.
-- Version drift against `requirements.txt` and the pinned ML stack.
+- Version drift against project requirements; historical pins apply only if the project explicitly adopts them.
 
 ## Scope boundary
 
 - General dependency/dead-code audits → `v-scripts`.
-- CI/deployment environment issues → `v-production`.
+- CI/deployment environment issues → `v-vibe-app` or `v-vercel-doctor`.
 - This skill is local Python environment setup on macOS only.
 
-See [references/venv-playbook.md](references/venv-playbook.md) for the failure-mode table, pinned stack, and output contract.
+See [references/venv-playbook.md](references/venv-playbook.md) for the failure-mode table and output contract.
