@@ -1,6 +1,6 @@
 ---
 name: component-gallery
-description: Find and adapt UI patterns using component.gallery when building or improving web pages, forms, navigation, tables, dialogs, and other interface components. Use for component selection, naming, design-system comparisons, and Component Gallery requests. Consult relevant examples when useful while respecting the project's existing stack and design system.
+description: "Research interface patterns and compare design-system implementations through component.gallery. Use when component choice, naming, or behavior needs evidence; verify APIs at the original source."
 ---
 
 # Component Gallery

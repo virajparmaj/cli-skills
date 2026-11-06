@@ -1,6 +1,6 @@
 ---
 name: easyui-components
-description: Build or enhance React UI using suitable components from easyui.site. Use when creating React pages, dashboards, forms, navigation, interactive controls, or animated components, and whenever the user requests EasyUI. Check EasyUI for useful matches while respecting the project's existing design system and the user's chosen libraries.
+description: "Find and integrate suitable easyui.site React components when EasyUI is requested or resolves a concrete component need. Preserve existing project tokens, libraries, and framework compatibility."
 ---
 
 # EasyUI components
