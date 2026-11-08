@@ -152,6 +152,11 @@ AI-generated interfaces (from v0, Lovable, Claude Artifacts, Bolt) exhibit recog
     - *Harm*: Characteristic signature of generic AI template generators; rigid numbers break when sections are reordered or removed.
     - *Fix*: Use clear descriptive headings that communicate value without artificial serial numbers.
 
+11. **The "Fake Vibe-Coded Site" Syndrome (12 Missing Production Essentials)**:
+    - *Symptom*: A public site or landing page with flashy visual polish that lacks core operational foundations: missing custom 404, no actionable CTA above the fold, generic or missing meta titles/descriptions, missing OG preview image, default framework favicon (Vite/Next/Lovable), missing robots.txt, missing sitemap.xml, images without alt text, missing loading/skeleton states, dead `#` privacy policy link, and zero analytics.
+    - *Harm*: Immediately reveals an unlaunched AI demo; destroys conversion, breaks accessibility and social sharing, hurts SEO, and violates basic compliance.
+    - *Fix*: Audit and complete the 12 essentials via `v-vibe-web` (`python3 v-vibe-web/scripts/audit_web_vibe.py --repo <repo>`).
+
 ## Auth And Security Weak Spots
 
 - UI-only roles or hidden navigation without backend enforcement

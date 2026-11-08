@@ -1,6 +1,6 @@
 ---
 name: v-vibe-web
-description: "Review websites, landing pages, and content portals for indexing, search discoverability, performance, UX recovery, and maintainability. Use for a website or marketing-site audit; use v-perf for a performance-only review."
+description: "Review websites, landing pages, and content portals for the 12 essentials of a real site, indexing, search discoverability, performance, UX recovery, and maintainability. Use for a website or marketing-site audit; use v-perf for a performance-only review."
 ---
 
 # Post-Vibe Website & Marketing Site Audit
@@ -32,7 +32,7 @@ Use this skill when auditing a website, landing page, marketing site, content/do
    - [references/google-technical-seo-checklist.md](references/google-technical-seo-checklist.md) for Google technical SEO and ranking (20-point checklist)
    - [references/geo-ai-search-checklist.md](references/geo-ai-search-checklist.md) for ChatGPT/Perplexity search optimization
    - [references/speedmaxxing-web-performance.md](references/speedmaxxing-web-performance.md) for 20-point speed optimization
-   - [references/web-prelaunch-checklist.md](references/web-prelaunch-checklist.md) for launch-blocking checks
+   - [references/web-prelaunch-checklist.md](references/web-prelaunch-checklist.md) for launch-blocking checks and the 12 essentials that make a vibe-coded site real
    - [references/design-and-codebase-slop.md](references/design-and-codebase-slop.md) for detecting AI UI and code slop patterns
    - [references/ux-trust-framework.md](references/ux-trust-framework.md) for UX trust, empty/loading/error state completeness, and user flow recovery
 
@@ -46,7 +46,7 @@ Separate public indexable content from private app routes. Source patterns canno
 2. Inspect raw and rendered HTML, status codes, canonical URLs, redirects, robots directives, and sitemap output where available. Verify current guidance in [references/google-technical-seo-checklist.md](references/google-technical-seo-checklist.md); do not infer indexing failure solely from a client-rendered shell.
 3. For AI-search discovery, use [references/geo-ai-search-checklist.md](references/geo-ai-search-checklist.md). Preserve the user’s crawler policy; training access, search discovery, and referrals are separate goals.
 4. For performance, use [references/speedmaxxing-web-performance.md](references/speedmaxxing-web-performance.md), with a measured baseline when runtime access exists. Source heuristics identify risks; they do not establish LCP, INP, or CLS.
-5. For launches and forms, use [references/web-prelaunch-checklist.md](references/web-prelaunch-checklist.md) and [references/ux-trust-framework.md](references/ux-trust-framework.md). Trace relevant loading, empty, validation, error, and recovery states.
+5. For launches, forms, and the 12 "real site" essentials (custom 404, CTA above fold, per-page meta title/desc, OG image, favicon set, robots.txt, sitemap.xml, alt text, loading states, privacy policy, analytics), use [references/web-prelaunch-checklist.md](references/web-prelaunch-checklist.md) and [references/ux-trust-framework.md](references/ux-trust-framework.md). Trace relevant loading, empty, validation, error, and recovery states.
 6. For maintainability/design concerns, use [references/design-and-codebase-slop.md](references/design-and-codebase-slop.md). Report concrete clarity, accessibility, change-cost, or behavior problems; aesthetic preferences alone are suggestions.
 
 ## Output
@@ -55,7 +55,7 @@ Keep the report proportional to scope:
 
 1. Site, framework/rendering model, reviewed paths, deployment evidence, and coverage limits.
 2. Short executive summary and `SHIP`, `FIX BEFORE TRAFFIC`, or `UNVERIFIED` verdict with its concrete basis.
-3. Applicable SEO, AI-discovery, performance, and UX scorecards. Use `PASS`, `FAIL`, `N/A`, and `UNVERIFIED`; source-only absence cannot prove missing DNS/account configuration or failed production indexing.
+3. Applicable SEO, AI-discovery, performance, UX, and 12 Real Site Essentials scorecards. Use `PASS`, `FAIL`, `N/A`, and `UNVERIFIED`; source-only absence cannot prove missing DNS/account configuration or failed production indexing.
 4. Verified findings ordered by practical score, with severity, exact evidence, reachable trigger, frequency x impact = score, rating reasons, confidence, smallest fix, and verification. Keep unverified concerns separate.
 5. A short action list, **Deferred issues**, and what is already good. Deduplicate tracked issues and report only meaningful changes in their evidence.
 

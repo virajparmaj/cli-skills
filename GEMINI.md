@@ -12,7 +12,7 @@ When the user invokes a skill to perform a task (for example, `v-auth` or "use v
 
 For each verified bug, give the reachable trigger and evidence, frequency (1-10) in current usage, impact (1-10), brief reasons for both ratings, and `frequency x impact = score`. Keep confidence separate. The default fix threshold is 5: defer lower-scoring issues once in an existing local backlog or the report's **Deferred issues** list; create remote issues only with authorization. Scores of 5 or more permit only in-scope, authorized fixes. Checklist examples are inspection prompts. Re-review affected code after changes; expand only for new evidence or failed checks.
 
-## Registered Skill Directory Names (39 primary skills)
+## Registered Skill Directory Names (40 primary skills)
 - `v-auth`: Authentication, authorization, session integrity, protected routes, and Supabase RLS audit.
 - `v-backtest-audit`: Backtest & signal evaluation leakage, lookahead, and realism audit.
 - `v-backtest-report`: Standardized, assumption-honest quantitative backtest report generation.
@@ -35,6 +35,7 @@ For each verified bug, give the reachable trigger and evidence, frequency (1-10)
 - `v-provenance`: Dataset provenance tracking, content hashing, and source auditing.
 - `v-readme`: Transform app, desktop software, or web README into user-first product documentation with auto-detected app type.
 - `v-regression-diagnostics`: Statistical validity checks for regression and hypothesis models.
+- `v-reset-usage`: One conservative housekeeping pass; apply only small verified internal cleanup, audit dependencies/schedules/storage, and skip uncertain or protected changes.
 - `v-run-ledger`: Zero-infra experiment tracking appending runs to `experiments/runs.csv`.
 - `v-scaffold`: Scaffold new web or python projects with Veer's stack conventions.
 - `v-scripts`: Engineering audit for dead code, build latency, and performance bottlenecks.
@@ -51,9 +52,9 @@ For each verified bug, give the reachable trigger and evidence, frequency (1-10)
 - `v-vibe-app`: Post-vibe SaaS & backend audit (19 distributed systems pillars, 80+ enterprise readiness, codebase slop, pre-launch 20).
 - `v-vibe-macos`: Post-vibe macOS desktop audit (App Sandbox, entitlements, PrivacyInfo.xcprivacy, atomic writes, WAL mode, App Store readiness).
 - `v-vibe-ml`: Post-vibe AI/LLM/agent audit (prompt injection, tenant spend caps, model fallback, evals, RAG isolation).
-- `v-vibe-web`: Post-vibe website & marketing audit (Google 20-point technical SEO & ranking checklist, GEO/AI search discovery, 20-point speedmaxxing, design slop, UX trust, Core Web Vitals).
+- `v-vibe-web`: Post-vibe website & marketing audit (the 12 essentials of a real site vs fake vibe site, Google 20-point technical SEO & ranking checklist, GEO/AI search discovery, 20-point speedmaxxing, design slop, UX trust, Core Web Vitals).
 
-## UI specialists (5 skills, 44 total)
+## UI specialists (5 skills, 45 total)
 
 - `boardui`: Work within an existing or explicitly selected BoardUI design system.
 - `component-gallery`: Find suitable interface patterns and adapt them to the project.
@@ -63,4 +64,4 @@ For each verified bug, give the reachable trigger and evidence, frequency (1-10)
 
 ## Install or refresh
 
-Run `python3 scripts/install-skills.py` from this checkout to preview changes, then add `--apply` to install. The installer links all 44 skills into Codex and existing Claude, Gemini, and OpenCode skill folders. It preserves unrelated skills and real directories, and removes retired aliases only when their links belong to this checkout. Run with `--check` to verify the installation. Use `--target <skills-directory>` to select an exact destination.
+Run `python3 scripts/install-skills.py` from this checkout to preview changes, then add `--apply` to install. The installer links all 45 skills into Codex and existing Claude, Gemini, and OpenCode skill folders. It preserves unrelated skills and real directories, and removes retired aliases only when their links belong to this checkout. Run with `--check` to verify the installation. Use `--target <skills-directory>` to select an exact destination.

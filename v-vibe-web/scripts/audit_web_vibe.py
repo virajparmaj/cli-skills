@@ -527,6 +527,264 @@ def check_google_technical_seo(repo_path: Path):
     return results
 
 
+def check_twelve_essentials(repo_path: Path, robots_report: dict, google_seo_report: dict, prelaunch_report: dict):
+    """Audit the 12 essentials that make a vibe-coded site real instead of a fake demo."""
+    results = {
+        "custom_404": {
+            "name": "Custom 404 page",
+            "passed": False,
+            "details": "Missing custom 404 / not-found page",
+        },
+        "cta_above_the_fold": {
+            "name": "CTA above the fold",
+            "passed": False,
+            "details": "No prominent CTA button/link detected in hero or landing view",
+        },
+        "meta_title_per_page": {
+            "name": "Meta title per page",
+            "passed": False,
+            "details": "No route-specific <title> or metadata.title detected",
+        },
+        "meta_description_per_page": {
+            "name": "Meta description per page",
+            "passed": False,
+            "details": "No meta description (<meta name='description'> or metadata.description) detected",
+        },
+        "og_image": {
+            "name": "Open Graph image",
+            "passed": False,
+            "details": "Missing og:image / twitter:image or opengraph-image asset",
+        },
+        "favicon_set": {
+            "name": "Favicon set",
+            "passed": False,
+            "details": "Missing custom favicon suite (/favicon.ico, apple-touch-icon, etc.)",
+        },
+        "robots_txt": {
+            "name": "robots.txt",
+            "passed": False,
+            "details": "Missing robots.txt",
+        },
+        "sitemap_xml": {
+            "name": "sitemap.xml",
+            "passed": False,
+            "details": "Missing sitemap.xml or dynamic sitemap generation",
+        },
+        "alt_text": {
+            "name": "Alt text on every image",
+            "passed": False,
+            "details": "Images missing alt attributes",
+        },
+        "loading_states": {
+            "name": "Loading states",
+            "passed": False,
+            "details": "No loading states, skeletons, spinners, or Suspense fallbacks detected",
+        },
+        "privacy_policy": {
+            "name": "Privacy policy page",
+            "passed": False,
+            "details": "Missing privacy policy page (/privacy)",
+        },
+        "analytics_installed": {
+            "name": "Analytics installed",
+            "passed": False,
+            "details": "No analytics telemetry detected (PostHog, Plausible, GA4, Vercel Analytics, etc.)",
+        },
+    }
+
+    # 1. Custom 404 page
+    if prelaunch_report.get("has_custom_404"):
+        results["custom_404"]["passed"] = True
+        results["custom_404"]["details"] = "Custom 404 / not-found page found"
+    else:
+        for p in walk_files(repo_path):
+            if p.suffix.lower() in WEB_EXTENSIONS:
+                try:
+                    content = p.read_text(errors="ignore")
+                    if re.search(r'path=["\']\*["\'].*?(?:NotFound|<404|not-found)', content, re.IGNORECASE) or 'NotFound' in p.name:
+                        results["custom_404"]["passed"] = True
+                        results["custom_404"]["details"] = f"Wildcard/NotFound route in {p.name}"
+                        break
+                except Exception:
+                    pass
+
+    # 7. robots.txt
+    if robots_report.get("found"):
+        results["robots_txt"]["passed"] = True
+        results["robots_txt"]["details"] = f"robots.txt found ({robots_report.get('file', 'robots.txt')})"
+
+    # 8. sitemap.xml
+    sitemaps = google_seo_report.get("sitemap_files", [])
+    if sitemaps:
+        results["sitemap_xml"]["passed"] = True
+        results["sitemap_xml"]["details"] = f"Sitemap found ({', '.join(sitemaps[:2])})"
+
+    # 9. Alt text on every image
+    missing_alts = google_seo_report.get("images_missing_alt", [])
+    if not missing_alts:
+        results["alt_text"]["passed"] = True
+        results["alt_text"]["details"] = "All images include alt attributes"
+    else:
+        results["alt_text"]["passed"] = False
+        results["alt_text"]["details"] = f"{len(missing_alts)} image(s) missing alt attributes"
+
+    # 11. Privacy policy
+    if prelaunch_report.get("has_privacy_policy"):
+        results["privacy_policy"]["passed"] = True
+        results["privacy_policy"]["details"] = "Privacy policy page/file found"
+    else:
+        for p in walk_files(repo_path):
+            if "privacy" in p.name.lower():
+                results["privacy_policy"]["passed"] = True
+                results["privacy_policy"]["details"] = f"Privacy page file: {p.name}"
+                break
+
+    cta_patterns = [
+        re.compile(r'\b(?:get started|start free|start trial|sign up|join now|join waitlist|book demo|book a demo|schedule demo|try free|try for free|request access|get access|explore features|download now|buy now|subscribe)\b', re.IGNORECASE),
+        re.compile(r'<(?:button|Button)[^>]*>[^<]*(?:Start|Join|Sign|Try|Get|Book|Download|Buy|Subscribe|Explore)[^<]*<\/(?:button|Button)>', re.IGNORECASE),
+        re.compile(r'<a\s+[^>]*href=["\'](?!#$)[^"\']+["\'][^>]*>[^<]*(?:Start|Join|Sign|Try|Get|Book|Download|Buy|Subscribe|Explore)[^<]*<\/a>', re.IGNORECASE),
+        re.compile(r'<Link\s+[^>]*to=["\'](?!#$)[^"\']+["\'][^>]*>[^<]*(?:Start|Join|Sign|Try|Get|Book|Download|Buy|Subscribe|Explore)[^<]*<\/Link>', re.IGNORECASE),
+    ]
+
+    title_pat = re.compile(r'<title>([^<]+)<\/title>', re.IGNORECASE)
+    meta_title_pat = re.compile(r'(?:title:\s*["\']([^"\']+)["\']|<Title>([^<]+)<\/Title>)', re.IGNORECASE)
+    desc_pat = re.compile(r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']+)["\']|<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']description["\']|description:\s*["\']([^"\']+)["\']', re.IGNORECASE)
+    loading_pat = re.compile(r'\b(?:Skeleton|Loader2|Spinner|isLoading|isPending|isSubmitting|fallback={<(?:Skeleton|Spinner|Loader2))\b|<Suspense\b|loading\.tsx|loading\.jsx', re.IGNORECASE)
+
+    analytics_signatures = [
+        ("@vercel/analytics", re.compile(r'@vercel\/analytics|va\(|VercelAnalytics')),
+        ("PostHog", re.compile(r'posthog-js|@posthog\/|posthog\.init|posthog\.capture')),
+        ("Plausible", re.compile(r'plausible-tracker|plausible\.io')),
+        ("Google Analytics / gtag", re.compile(r'gtag\(|google-analytics\.com|@next\/third-parties\/google|react-ga4|react-ga|G-[A-Z0-9]+')),
+        ("Umami", re.compile(r'umami\.is|analytics\.umami\.is|data-website-id=')),
+        ("Fathom", re.compile(r'usefathom\.com|fathom-client')),
+        ("Mixpanel", re.compile(r'mixpanel-browser|mixpanel\.init')),
+        ("Cloudflare Web Analytics", re.compile(r'cloudflareinsights\.com|static\.cloudflareinsights\.com')),
+        ("Segment", re.compile(r'@segment\/analytics-next|analytics\.track')),
+    ]
+
+    favicon_files = []
+    found_titles = []
+    found_descs = []
+    loading_matches = 0
+    hero_cta_found = None
+    detected_analytics = []
+
+    for p in walk_files(repo_path):
+        name_lower = p.name.lower()
+
+        # Check favicon files
+        if name_lower in ["favicon.ico", "favicon.svg", "favicon.png", "apple-touch-icon.png", "site.webmanifest", "manifest.json", "icon.png", "icon.svg"]:
+            favicon_files.append(str(p.relative_to(repo_path)))
+
+        # Check OG image files
+        if any(name_lower.startswith(prefix) for prefix in ["opengraph-image", "twitter-image", "og-image", "og."]):
+            if p.suffix.lower() in [".png", ".jpg", ".jpeg", ".webp", ".svg", ".tsx", ".jsx", ".ts", ".js"]:
+                results["og_image"]["passed"] = True
+                results["og_image"]["details"] = f"OG image file found: {p.name}"
+
+        # Check package.json for analytics
+        if name_lower == "package.json":
+            try:
+                data = json.loads(p.read_text(errors="ignore"))
+                deps = {**data.get("dependencies", {}), **data.get("devDependencies", {})}
+                for provider, pat in analytics_signatures:
+                    for dep in deps:
+                        if pat.search(dep) and provider not in detected_analytics:
+                            detected_analytics.append(provider)
+            except Exception:
+                pass
+
+        if p.suffix.lower() in WEB_EXTENSIONS:
+            rel = str(p.relative_to(repo_path))
+            try:
+                content = p.read_text(errors="ignore")
+            except Exception:
+                continue
+
+            # Check OG tags
+            if not results["og_image"]["passed"]:
+                if 'property="og:image"' in content or 'name="og:image"' in content or ('openGraph:' in content and 'images:' in content):
+                    results["og_image"]["passed"] = True
+                    results["og_image"]["details"] = f"og:image tag defined in {p.name}"
+
+            # Check favicon tags
+            if '<link' in content and ('rel="icon"' in content or "rel='icon'" in content or 'apple-touch-icon' in content):
+                if rel not in favicon_files:
+                    favicon_files.append(f"tag in {p.name}")
+
+            # Check titles
+            for m in title_pat.finditer(content):
+                val = m.group(1).strip()
+                if val and "Vite + React" not in val:
+                    found_titles.append(val)
+            for m in meta_title_pat.finditer(content):
+                val = (m.group(1) or m.group(2) or "").strip()
+                if val and "Vite + React" not in val:
+                    found_titles.append(val)
+
+            # Check descriptions
+            for m in desc_pat.finditer(content):
+                val = (m.group(1) or m.group(2) or m.group(3) or "").strip()
+                if val and len(val) > 10:
+                    found_descs.append(val)
+
+            # Check loading states
+            if loading_pat.search(content):
+                loading_matches += 1
+
+            # Check CTA above the fold
+            is_landing = any(k in name_lower for k in ["hero", "masthead", "home", "landing"]) or name_lower in ["page.tsx", "page.jsx", "index.tsx", "index.jsx", "app.tsx", "app.jsx", "index.html", "+page.svelte", "index.astro"]
+            if is_landing and not hero_cta_found:
+                lines = content.splitlines()[:150]
+                head_snippet = "\n".join(lines)
+                for cta_pat in cta_patterns:
+                    match = cta_pat.search(head_snippet)
+                    if match:
+                        hero_cta_found = (rel, match.group(0)[:40])
+                        break
+
+            # Check analytics in code
+            for provider, pat in analytics_signatures:
+                if provider not in detected_analytics and pat.search(content):
+                    detected_analytics.append(provider)
+
+    if hero_cta_found:
+        results["cta_above_the_fold"]["passed"] = True
+        results["cta_above_the_fold"]["details"] = f"Actionable CTA in {hero_cta_found[0]} ('{hero_cta_found[1].strip()}')"
+
+    if found_titles:
+        results["meta_title_per_page"]["passed"] = True
+        results["meta_title_per_page"]["details"] = f"Page titles detected ({len(found_titles)} found, e.g. '{found_titles[0][:40]}')"
+
+    if found_descs:
+        results["meta_description_per_page"]["passed"] = True
+        results["meta_description_per_page"]["details"] = f"Meta descriptions detected ({len(found_descs)} found)"
+
+    if favicon_files:
+        results["favicon_set"]["passed"] = True
+        results["favicon_set"]["details"] = f"Favicon set detected ({', '.join(favicon_files[:3])})"
+
+    if loading_matches > 0:
+        results["loading_states"]["passed"] = True
+        results["loading_states"]["details"] = f"Loading states detected ({loading_matches} files with Skeletons/spinners/Suspense)"
+
+    if detected_analytics:
+        results["analytics_installed"]["passed"] = True
+        results["analytics_installed"]["details"] = f"Analytics installed: {', '.join(detected_analytics)}"
+
+    passed_count = sum(1 for v in results.values() if v["passed"])
+    verdict = "REAL SITE (PRODUCTION READY)" if passed_count == 12 else f"FAKE VIBE SITE DETECTED ({12 - passed_count} GAPS)"
+
+    return {
+        "score": f"{passed_count}/12",
+        "passed_count": passed_count,
+        "total": 12,
+        "verdict": verdict,
+        "items": results,
+    }
+
+
 def main():
     args = parse_args()
     repo_path = Path(args.repo).resolve()
@@ -541,10 +799,12 @@ def main():
     prelaunch_report = check_prelaunch_essentials(repo_path)
     slop_report = check_design_and_codebase_slop(repo_path)
     google_seo_report = check_google_technical_seo(repo_path)
+    twelve_essentials_report = check_twelve_essentials(repo_path, robots_report, google_seo_report, prelaunch_report)
 
     full_report = {
         "evidence_scope": "Static source candidates; runtime enforcement and deployment remain unverified",
         "repo": str(repo_path),
+        "twelve_real_essentials": twelve_essentials_report,
         "robots_txt": robots_report,
         "geo_and_ai_search": geo_report,
         "speedmaxxing": speed_report,
@@ -560,6 +820,29 @@ def main():
     print("Static source candidates only; unmatched patterns do not prove safety or absence.")
     print("=" * 70)
     print("V-VIBE-WEB: WEBSITE & LANDING PAGE AUDIT SUMMARY")
+    print("=" * 70)
+
+    print(f"\nTHE 12 ESSENTIALS: REAL SITE VS FAKE VIBE SITE SCORECARD ({twelve_essentials_report['score']} PASS)")
+    print("-" * 70)
+    item_order = [
+        ("custom_404", "1. Custom 404 page"),
+        ("cta_above_the_fold", "2. CTA above the fold"),
+        ("meta_title_per_page", "3. Meta title per page"),
+        ("meta_description_per_page", "4. Meta description per page"),
+        ("og_image", "5. Open Graph image"),
+        ("favicon_set", "6. Favicon set"),
+        ("robots_txt", "7. robots.txt"),
+        ("sitemap_xml", "8. sitemap.xml"),
+        ("alt_text", "9. Alt text on every image"),
+        ("loading_states", "10. Loading states"),
+        ("privacy_policy", "11. Privacy policy page"),
+        ("analytics_installed", "12. Analytics installed"),
+    ]
+    for key, label in item_order:
+        item = twelve_essentials_report["items"][key]
+        status = "PASS" if item["passed"] else "FAIL (Missing)"
+        print(f"  {label:<32}: [{status}] - {item['details']}")
+    print(f"  VERDICT: {twelve_essentials_report['verdict']}")
     print("=" * 70)
 
     print("\n1. GEO & AI Search Discovery (ChatGPT / Perplexity / Claude):")

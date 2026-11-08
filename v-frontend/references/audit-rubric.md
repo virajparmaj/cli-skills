@@ -313,7 +313,7 @@ Use when user asks about page speed, LCP, CLS, INP, or says *"My website feels s
 
 - Identify the Largest Contentful Paint (LCP) element on the main landing route.
 - Check whether that element is render-blocked by fonts, large images, or JavaScript.
-- **Hero Image Anti-Pattern**: Verify the main hero image is NOT lazy-loaded (`loading="lazy"` on above-the-fold heroes kills LCP). Ensure `fetchpriority="high"` is set.
+- **Hero Image & CTA Anti-Pattern**: Verify the main hero image is NOT lazy-loaded (`loading="lazy"` on above-the-fold heroes kills LCP). Ensure `fetchpriority="high"` is set, and confirm the primary Call-To-Action (CTA) is immediately visible and actionable above the fold rather than pushed down by oversized media.
 - Look for layout shift causes: images without explicit `width` and `height`, dynamically injected content, font swaps.
 - Identify long tasks that could affect Interaction to Next Paint (INP): heavy event handlers, synchronous layout reads, unmemoized Context providers, or blocking hydration.
 - Check for `requestAnimationFrame` or `requestIdleCallback` usage on expensive non-critical work.

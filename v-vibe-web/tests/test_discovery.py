@@ -52,6 +52,75 @@ class DiscoveryTests(unittest.TestCase):
         self.write("index.html", '<form><input name="csrf"></form>')
         self.assertFalse(audit.check_prelaunch_essentials(self.repo)["has_form_bot_defense"])
 
+    def test_twelve_essentials_complete_real_site(self):
+        # 1. Custom 404
+        self.write("404.html", "<h1>Page Not Found</h1><a href='/'>Home</a>")
+        # 2. CTA above the fold & 3. Title & 4. Description & 5. OG Image & 9. Alt text
+        self.write(
+            "index.html",
+            """<!DOCTYPE html>
+            <html>
+            <head>
+                <title>Acme Inc | Cloud Infrastructure</title>
+                <meta name="description" content="Acme is the premier developer platform for edge orchestration.">
+                <meta property="og:image" content="https://acme.com/og.png">
+            </head>
+            <body>
+                <header>
+                    <h1>Build Faster with Acme</h1>
+                    <a href="/signup" class="btn">Get Started Free</a>
+                </header>
+                <main>
+                    <img src="/hero.png" alt="Acme Dashboard Screenshot">
+                </main>
+            </body>
+            </html>"""
+        )
+        # 6. Favicon set
+        self.write("public/favicon.ico", "ico")
+        self.write("public/apple-touch-icon.png", "png")
+        # 7. robots.txt
+        self.write("public/robots.txt", "User-agent: *\nAllow: /\nSitemap: https://acme.com/sitemap.xml\n")
+        # 8. sitemap.xml
+        self.write("public/sitemap.xml", "<urlset><url><loc>https://acme.com/</loc></url></urlset>")
+        # 10. Loading states
+        self.write("src/components/Loader.tsx", "export function TableSkeleton() { return <div className='skeleton'>Loading...</div> }")
+        # 11. Privacy policy
+        self.write("src/pages/privacy.tsx", "export default function Privacy() { return <h1>Privacy Policy</h1> }")
+        # 12. Analytics installed
+        self.write("package.json", json.dumps({"dependencies": {"@vercel/analytics": "^1.0.0"}}))
+
+        robots_rep = audit.check_robots_txt(self.repo)
+        seo_rep = audit.check_google_technical_seo(self.repo)
+        prelaunch_rep = audit.check_prelaunch_essentials(self.repo)
+
+        report = audit.check_twelve_essentials(self.repo, robots_rep, seo_rep, prelaunch_rep)
+
+        self.assertEqual(report["score"], "12/12")
+        self.assertEqual(report["verdict"], "REAL SITE (PRODUCTION READY)")
+        for key, item in report["items"].items():
+            self.assertTrue(item["passed"], f"Expected {key} to pass, but details: {item['details']}")
+
+    def test_twelve_essentials_fake_vibe_site_flags_gaps(self):
+        # Empty repo has no essentials
+        robots_rep = audit.check_robots_txt(self.repo)
+        seo_rep = audit.check_google_technical_seo(self.repo)
+        prelaunch_rep = audit.check_prelaunch_essentials(self.repo)
+
+        report = audit.check_twelve_essentials(self.repo, robots_rep, seo_rep, prelaunch_rep)
+        self.assertIn("FAKE VIBE SITE DETECTED", report["verdict"])
+        self.assertFalse(report["items"]["custom_404"]["passed"])
+        self.assertFalse(report["items"]["cta_above_the_fold"]["passed"])
+        self.assertFalse(report["items"]["meta_title_per_page"]["passed"])
+        self.assertFalse(report["items"]["meta_description_per_page"]["passed"])
+        self.assertFalse(report["items"]["og_image"]["passed"])
+        self.assertFalse(report["items"]["favicon_set"]["passed"])
+        self.assertFalse(report["items"]["robots_txt"]["passed"])
+        self.assertFalse(report["items"]["sitemap_xml"]["passed"])
+        self.assertFalse(report["items"]["loading_states"]["passed"])
+        self.assertFalse(report["items"]["privacy_policy"]["passed"])
+        self.assertFalse(report["items"]["analytics_installed"]["passed"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,10 +1,29 @@
 # Design Slop & Codebase Slop Guide for Websites & Web Apps
 
-Vibe-coding engines (v0, Lovable, Bolt, Cursor, Claude) frequently produce two categories of structural defects: visual design slop that immediately gives away AI-generated templates, and codebase slop that causes technical debt.
+Vibe-coding engines (v0, Lovable, Bolt, Cursor, Claude) frequently produce three categories of structural defects: fake-site omissions where foundational production essentials are missing, visual design slop that immediately gives away AI-generated templates, and codebase slop that causes technical debt.
 
 ---
 
-## Part 1: Design Slop Indicators (The 10 AI UI Smells)
+## Part 1: The "Fake Vibe-Coded Site" Syndrome (The 12 Missing Essentials)
+
+A vibe-coded website often presents an elaborate, flashy aesthetic (glassmorphism, dark mode, glowing gradients, animated carousels, and badge spam), but it is functionally a **fake site** because it lacks the 12 essentials that make a production web property real:
+
+1. **Custom 404 page**: Falling back to raw framework 404s (`404 | This page could not be found` or a blank screen) instead of a branded, helpful navigation page.
+2. **CTA above the fold**: Pushing the primary conversion button off-screen below the fold in favor of oversized abstract 3D canvas animations, terminal mockups, or decorative hero art.
+3. **Meta title per page**: Leaving default template titles (`Vite + React + TS`, `Create Next App`) or having a single static title across all routes in `index.html`.
+4. **Meta description per page**: Completely omitting `<meta name="description">` or copy-pasting generic template copy across all routes.
+5. **Open Graph image**: Omitting `og:image` / `twitter:image`, generating broken or blank link preview cards in Slack, Discord, Twitter/X, and iMessage.
+6. **Favicon set**: Leaving the default Vite purple lightning bolt, Next.js triangle, or Lovable heart favicon in the browser tab.
+7. **robots.txt**: Omitting `robots.txt` or leaving staging `Disallow: /` directives active in production.
+8. **sitemap.xml**: Failing to provide a discoverable XML sitemap of canonical routes for search indexing.
+9. **Alt text on every image**: Leaving raw `<img>` tags without `alt` descriptions or with generic `alt="image"`, failing accessibility and image SEO.
+10. **Loading states**: Having no skeletons, spinners, or `<Suspense>` fallbacks during async data loading or mutations, resulting in frozen screens or layout thrashing.
+11. **Privacy policy page**: Dead `#` links in the footer instead of a real, accessible `/privacy` policy page.
+12. **Analytics installed**: Flying blind with zero telemetry (no PostHog, Plausible, GA4, or Vercel Analytics) to track real user traffic and conversions.
+
+---
+
+## Part 2: Design Slop Indicators (The 10 AI UI Smells)
 
 ### 1. Tags / Badge Spam
 - **The Pattern**: Slapping `<Badge>` pills on every card, feature title, and navbar item ("NEW", "FEATURE", "AI-POWERED", "BETA", "v1.2", "POPULAR").
@@ -58,7 +77,7 @@ Vibe-coding engines (v0, Lovable, Bolt, Cursor, Claude) frequently produce two c
 
 ---
 
-## Part 2: Codebase Slop Indicators (The 9 Core Antipatterns)
+## Part 3: Codebase Slop Indicators (The 9 Core Antipatterns)
 
 ### 1. Implicit Coupling
 - **Symptom**: Components secretly read from or write to unversioned localStorage, global window variables, or rely on implicit parent re-render side-effects.

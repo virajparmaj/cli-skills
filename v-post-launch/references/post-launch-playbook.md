@@ -2,6 +2,9 @@
 
 Use these examples only for selected, authorized checkpoints. Analytics, promotion, and badges are optional. Check live responses and external account status separately; static artifacts do not prove submission or indexing. Preserve deliberate noindex, crawler restrictions, consent, and canonical choices. Apply the entrypoint’s scoring/deferral policy.
 
+> [!NOTE]
+> These post-launch checkpoints directly reinforce the **12 Essentials that Make a Vibe-Coded Site Real** (analytics, robots.txt, sitemap.xml, route-specific titles/descriptions, and Open Graph previews). For the complete 12-point pre-launch audit including custom 404s, CTA above the fold, favicon suite, image alt text, loading states, and privacy policy, see `v-vibe-web`.
+
 ---
 
 ## 1. Remove the `noindex` Tags

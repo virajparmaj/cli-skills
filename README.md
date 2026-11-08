@@ -1,6 +1,6 @@
 # CLI skills
 
-44 reusable skills: 39 primary workflows and 5 UI specialists. This checkout is the source; installed symlinks keep local improvements available across projects.
+45 reusable skills: 40 primary workflows and 5 UI specialists. This checkout is the source; installed symlinks keep local improvements available across projects.
 
 The [latest skill-by-skill review](reviews/2026-11-06-skills.md) records robustness fixes, current-source updates, measured efficiency, and validation limits. A [JSON version](reviews/2026-11-06-skills.json) includes resource and change coverage for every skill.
 
@@ -27,6 +27,10 @@ Repeat `--target` for multiple directories. Add `--report /tmp/skills-install.js
 ## Choose a skill
 
 Invoke a skill by name, such as `$v-auth`, `$v-readme`, or `$v-git`, with the task you want performed. [GEMINI.md](GEMINI.md) lists the collection. Reviews stay read-only; commit, push, and external publication require the corresponding user request. Personal Git work uses `main` and the configured human identity.
+
+## Conservative housekeeping
+
+Invoke `$v-reset-usage` in a repository for one unattended maintenance pass. It applies only small, verified internal dead-code removal or trivial deduplication, with a clean baseline, required checks, and a cumulative limit of five source files and 100 changed lines. Dependencies, schedules, sessions, and worktrees are audited without mutation; uncertain or protected changes are skipped. It does not reset account usage, commit, or push.
 
 ## Validate the collection
 

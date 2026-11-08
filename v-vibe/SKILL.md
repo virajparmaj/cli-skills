@@ -82,6 +82,7 @@ Use this skill when the task is to inspect a repo, not to fix it. Stay in review
      - **Diagrams (the more detailed, the worse)**: Superfluous ASCII/SVG/Mermaid architecture diagrams, node graphs, or decorative flowcharts that add clutter without semantic or functional value.
      - **Code breadcrumbs**: Fake terminal prompts, decorative pseudo-code blocks, or deeply nested decorative breadcrumbs (`Dashboard > Analytics > Overview > Metric 1`) cluttering user workflow.
      - **Section numbering**: Robotic numbered sections ("01 / Features", "02 / Architecture", "03 / Pricing", "Step 01 - Onboarding") typical of generic AI template generation.
+     - **The fake vibe site antipattern (12 missing essentials)**: Shiny surface aesthetics masking the absence of production foundations: (1) Custom 404 page, (2) CTA above the fold, (3) Meta title per page, (4) Meta description per page, (5) Open Graph image, (6) Favicon set, (7) robots.txt, (8) sitemap.xml, (9) Alt text on every image, (10) Loading states, (11) Privacy policy page, (12) Analytics installed. Route full website checks to `v-vibe-web`.
 
    - Oversized files and god modules:
      - Inspect files above roughly 300 LOC as candidates; report only demonstrated responsibility or change-coupling problems.

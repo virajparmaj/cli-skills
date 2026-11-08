@@ -1,0 +1,4 @@
+interface:
+  display_name: "Conservative Repo Housekeeping"
+  short_description: "Small verified cleanup; skip risky changes"
+  default_prompt: "Use $v-reset-usage for one conservative housekeeping pass on this repository: apply only verified small internal cleanup, audit dependencies/schedules/storage, skip uncertain changes, run required checks, and report once."

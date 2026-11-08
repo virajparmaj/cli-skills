@@ -1,6 +1,6 @@
 ---
 name: v-declutter
-description: "Review or simplify repository structure, redundant wrappers, duplicate logic, dead files, and Lovable/GPT-Engineer artifacts while preserving behavior and data. Use for requested decluttering or structural cleanup; an audit-only request stays read-only."
+description: "Review or simplify repository structure, hidden dependencies, change boundaries, redundant wrappers, duplicate logic, dead files, and Lovable/GPT-Engineer artifacts while preserving behavior and data. Use for requested decluttering or structural cleanup; an audit-only request stays read-only."
 ---
 
 # Codebase Declutter & Architecture Streamliner
@@ -23,7 +23,7 @@ For a cleanup request, inventory candidates, prepare a concrete action table, ap
 - Confirm candidates in source and current configuration, and use runtime evidence when the conclusion depends on runtime behavior. Cite exact paths/lines or measurements; distinguish verified findings, inferred risks, and unavailable evidence. A failed helper does not invalidate independently verified facts.
 - Read only references relevant to the requested scope. Mark inapplicable checks **N/A** and unavailable checks **UNVERIFIED**; do not infer a missing capability from an unmatched scanner pattern.
 
-## The 4 Core Focus Areas
+## The 5 Core Focus Areas
 
 1. **Redundant Files & Directories**:
    - Flatten single-child or redundant directory nesting (e.g., `src/components/companies/CompaniesTable/CompaniesTable.tsx` -> `src/components/companies/CompaniesTable.tsx`).
@@ -39,7 +39,13 @@ For a cleanup request, inventory candidates, prepare a concrete action table, ap
    - Deduplicate repetitive loops, copy-pasted data transformers, or formatting routines into parameterized helpers.
    - Prune unreferenced exports, dead types, and unused imports.
 
-4. **Non-Negotiable Quality Gates**:
+4. **Change Boundaries & Hidden Dependencies**:
+   - Trace code that must change together but has duplicated policy, implicit global/file state, or undocumented call order.
+   - Check callers coupled to implementation details and interfaces containing vocabulary for only one workflow.
+   - Use actual callers and current requirements to distinguish unnecessary special cases from required behavior.
+   - For an untangling request or verified coupling candidate, read [references/change-boundaries.md](references/change-boundaries.md). Group related evidence under the smallest common fix before editing.
+
+5. **Non-Negotiable Quality Gates**:
    - Preserve 100% data integrity and existing test contracts.
    - Verify external contracts: environment variables, URL routes, API endpoints, and persistence (`localStorage`, database schemas) must remain completely untouched.
    - Run the full test suite and production build to guarantee zero regressions.
@@ -68,6 +74,8 @@ For a cleanup request, inventory candidates, prepare a concrete action table, ap
 3. If stripping AI-generator or Lovable traces, run `bash scripts/find-lovable-traces.sh <repo-path>` and follow [references/lovable-removal-playbook.md](references/lovable-removal-playbook.md).
 
 ### Step 3: Formulate Restructuring Plan
+For untangling work, record the current dependency path and the concrete change that would need synchronized edits. Keep a compact decision log grouping affected sites under each proposed fix; distinguish verified bugs from structural improvements. A directory shape, retry, exception handler, or single-caller parameter alone is not a finding. Preserve comments and test coverage unless their cleanup is requested. Recheck affected callers once after each fix; repeat only for regressions, failed checks, or unresolved evidence under the practical review policy.
+
 Draft the Action Plan Table before mutating the filesystem:
 - List every file to be moved, renamed, unwrapped, consolidated, or deleted.
 - Identify all dependent files whose `import` statements must be remapped.
@@ -109,7 +117,7 @@ Produce exactly these three parts in order:
 | src/types/deprecatedTypes.ts | Dead code | Pruned unreferenced types | APPLIED |
 ```
 
-- `Category`: `Single-child nesting`, `Stuttering path`, `Pass-through wrapper`, `Patch sprawl`, `Logic duplicate`, or `Dead code`.
+- `Category`: `Single-child nesting`, `Stuttering path`, `Pass-through wrapper`, `Patch sprawl`, `Logic duplicate`, `Dead code`, or `Change boundary`.
 - `Action Taken`: Specific concise description of the refactoring step.
 - `Status`: `APPLIED`, `KEPT (with reason)`, or `SKIPPED`.
 
